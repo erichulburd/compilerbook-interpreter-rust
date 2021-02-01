@@ -1,21 +1,44 @@
-use std::string;
+use std::{fmt};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum TokenType {
-    LET,
     ILLEGAL,
     EOF,
-    IDENT,
-    INT,
+
     ASSIGN,
     PLUS,
+    MINUS,
+    BANG,
+    ASTERISK,
+    SLASH,
+    LT,
+    GT,
     COMMA,
     SEMICOLON,
     LPAREN,
     RPAREN,
     LBRACE,
     RBRACE,
+
+    EQ,
+    NotEq,
+
+    IDENT,
+    INT,
+
+    LET,
     FUNCTION,
+    IF,
+    ELSE,
+    RETURN,
+    TRUE,
+    FALSE,
+}
+
+impl fmt::Display for TokenType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 pub struct Token {
@@ -23,10 +46,49 @@ pub struct Token {
     pub token_type: TokenType,
 }
 
+impl fmt::Display for Token {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Write strictly the first element into the supplied output
+        // stream: `f`. Returns `fmt::Result` which indicates whether the
+        // operation succeeded or failed. Note that `write!` uses syntax which
+        // is very similar to `println!`.
+        write!(f, "{}: {}", self.token_type, self.literal)
+    }
+}
+
+pub fn lookup_char(ch: Option<char>) -> Option<TokenType> {
+    if ch.is_none() {
+        return None;
+    }
+    match ch.unwrap() {
+        '=' => Some(TokenType::ASSIGN),
+        ';' => Some(TokenType::SEMICOLON),
+        '(' => Some(TokenType::LPAREN),
+        ')' => Some(TokenType::RPAREN),
+        '{' => Some(TokenType::LBRACE),
+        '}' => Some(TokenType::RBRACE),
+        ',' => Some(TokenType::COMMA),
+        '+' => Some(TokenType::PLUS),
+        '-' => Some(TokenType::MINUS),
+        '!' => Some(TokenType::BANG),
+        '*' => Some(TokenType::ASTERISK),
+        '/' => Some(TokenType::SLASH),
+        '<' => Some(TokenType::LT),
+        '>' => Some(TokenType::GT),
+        _ => None,
+    }
+}
+
 pub fn lookup_keyword(literal: String) -> TokenType {
     match &literal[..] {
         "fn" => TokenType::FUNCTION,
         "let" => TokenType::LET,
+        "if" => TokenType::IF,
+        "else" => TokenType::ELSE,
+        "return" => TokenType::RETURN,
+        "true" => TokenType::TRUE,
+        "false" => TokenType::FALSE,
         _ => TokenType::IDENT,
     }
 }
