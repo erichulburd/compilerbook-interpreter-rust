@@ -9,8 +9,8 @@ pub struct Lexer<'a> {
     ch: Option<char>,
 }
 
-impl Lexer<'_> {
-    pub fn new(input: &'_ str) -> Lexer {
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Lexer<'a> {
         let mut l = Lexer{
             input: input,
             position: 0,
@@ -38,7 +38,7 @@ impl Lexer<'_> {
         }
     }
 
-    pub fn next_token(&mut self) -> token::Token {
+    pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
 
         let multi_char_token = self.read_multi_char_tokens();
@@ -50,7 +50,7 @@ impl Lexer<'_> {
         if token_type.is_some() {
             let literal = String::from(self.ch.unwrap());
             self.read_char();
-            return token::Token{
+            return Token{
                 token_type: token_type.unwrap(),
                 literal: literal,
             };
@@ -58,15 +58,15 @@ impl Lexer<'_> {
 
         if self.ch.unwrap_or('0').is_alphabetic() {
             let literal = self.read_identifier();
-            let token_type = token::lookup_keyword(literal.clone());
-            return token::Token{
+            let token_type = token::lookup_keyword(literal.as_str());
+            return Token{
                 token_type: token_type,
                 literal: literal,
             };
         }
         if self.ch.unwrap_or('a').is_numeric() {
-            return token::Token{
-                token_type: token::TokenType::INT,
+            return Token{
+                token_type: TokenType::INT,
                 literal: self.read_number(),
             };
         }
@@ -75,8 +75,8 @@ impl Lexer<'_> {
             _ => String::from(self.ch.unwrap()),
         };
         self.read_char();
-        token::Token{
-            token_type: token::TokenType::EOF,
+        Token{
+            token_type: TokenType::EOF,
             literal: s,
         }
     }
@@ -99,7 +99,7 @@ impl Lexer<'_> {
         return s;
     }
 
-    pub fn read_char(&mut self) {
+    fn read_char(&mut self) {
         if self.read_position >= self.input.len() as i32 {
             self.ch = None;
         } else {
@@ -110,7 +110,7 @@ impl Lexer<'_> {
         self.read_position += 1;
     }
 
-    fn read_multi_char_tokens(&mut self) -> Option<token::Token> {
+    fn read_multi_char_tokens(&mut self) -> Option<Token> {
         match self.ch.unwrap_or('0') {
             '=' => {
                 if self.peek_char().unwrap_or('0') == '=' {
@@ -139,6 +139,13 @@ impl Lexer<'_> {
     }
 
     fn peek_char(&self) -> Option<char> {
+        if self.read_position as usize >= self.input.len() {
+            return None
+        }
+        self.input.chars().nth(self.read_position as usize)
+    }
+
+    fn peek_token(&self) -> Option<char> {
         if self.read_position as usize >= self.input.len() {
             return None
         }

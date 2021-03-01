@@ -1,6 +1,6 @@
-use std::{fmt};
+use std::{borrow::Cow, fmt};
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum TokenType {
     ILLEGAL,
     EOF,
@@ -35,12 +35,17 @@ pub enum TokenType {
     FALSE,
 }
 
+impl Default for TokenType {
+    fn default() -> Self { TokenType::EOF }
+}
+
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
+#[derive(Debug, Clone, Default)]
 pub struct Token {
     pub literal: String,
     pub token_type: TokenType,
@@ -80,7 +85,7 @@ pub fn lookup_char(ch: Option<char>) -> Option<TokenType> {
     }
 }
 
-pub fn lookup_keyword(literal: String) -> TokenType {
+pub fn lookup_keyword(literal: &str) -> TokenType {
     match &literal[..] {
         "fn" => TokenType::FUNCTION,
         "let" => TokenType::LET,
@@ -100,9 +105,9 @@ mod tests {
 
     #[test]
     fn get_keyword() {
-        assert_eq!(TokenType::LET, lookup_keyword(String::from("let")));
-        assert_eq!(TokenType::FUNCTION, lookup_keyword(String::from("fn")));
-        assert_eq!(TokenType::IDENT, lookup_keyword(String::from("blah")));
+        assert_eq!(TokenType::LET, lookup_keyword("let"));
+        assert_eq!(TokenType::FUNCTION, lookup_keyword("fn"));
+        assert_eq!(TokenType::IDENT, lookup_keyword("blah"));
     }
 
 }
