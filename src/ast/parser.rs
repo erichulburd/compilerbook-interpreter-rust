@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use crate::lexer::Lexer;
 
-use super::{identifier, let_statement::{LetStatement}};
+use super::{identifier, let_statement::{LetStatement}, return_statement::ReturnStatement};
 use super::identifier::Identifier;
 use super::statement::Statement;
 use super::program::Program;
@@ -10,6 +10,7 @@ use crate::token::{Token, TokenType};
 
 pub struct Parser<'a> {
   l: &'a mut Lexer<'a>,
+  errors: Vec<String>,
   current_token: Option<Token>,
   peek_token: Option<Token>,
 }
@@ -18,6 +19,7 @@ impl<'a> Parser<'a> {
   pub fn new(l: &'a mut Lexer<'a>) -> Parser<'a> {
     let mut p = Parser{
       l: l,
+      errors: vec![],
       current_token: None,
       peek_token: None,
     };
@@ -42,7 +44,11 @@ impl<'a> Parser<'a> {
     if self.peek_token_is(tt) {
       self.next_token();
       true
+    } else if self.peek_token.clone().is_none(){
+      self.errors.push(String::from(format!("expected next token to be {}, but none exists", tt)));
+      false
     } else {
+      self.errors.push(String::from(format!("expected next token to be {}, got {} instead", tt, self.peek_token.clone().unwrap().token_type)));
       false
     }
   }
@@ -95,6 +101,31 @@ impl<'a> Parser<'a> {
     Some(stmt)
   }
 
+  fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
+    if self.current_token.is_none() {
+      return None;
+    }
+
+
+    let t = self.current_token.clone().unwrap();
+    let token = Token{
+      token_type: t.token_type,
+      literal: t.literal,
+    };
+
+    let stmt = ReturnStatement{
+      token: token,
+      value: None, // FIXME
+    };
+    self.next_token();
+    while !self.current_token_is(TokenType::SEMICOLON) {
+      self.next_token();
+    }
+    self.next_token();
+    Some(stmt)
+  }
+
+
   fn parse_statement(&mut self) -> Option<Statement> {
     if self.current_token.is_none() {
       return None;
@@ -107,6 +138,13 @@ impl<'a> Parser<'a> {
           return None;
         }
         Some(Statement::LetStatement(let_statement.unwrap()))
+      },
+      TokenType::RETURN => {
+        let st = self.parse_return_statement();
+        if st.is_none() {
+          return None;
+        }
+        Some(Statement::ReturnStatement(st.unwrap()))
       },
       _ => {
         None
@@ -155,6 +193,7 @@ mod tests {
     let mut p = Parser::new(&mut l);
     let program: Program = p.parse_program();
     assert_eq!(3, program.statements.len(), "unexpected number of statements parsed");
+    assert_eq!(0, p.errors.len());
 
     let tests = vec![
       ("x"),
@@ -176,4 +215,29 @@ mod tests {
     }
   }
 
+
+  #[test]
+  fn return_statements() {
+    let input = "\
+    return 5;\
+    return 10;\
+    return 838383;";
+    let mut l = Lexer::new(input);
+    let mut p = Parser::new(&mut l);
+    let program: Program = p.parse_program();
+    assert_eq!(3, program.statements.len(), "unexpected number of statements parsed");
+    assert_eq!(0, p.errors.len());
+
+    for (i, statement) in program.statements.iter().enumerate() {
+      match statement {
+        Statement::ReturnStatement(st) => {
+          assert_eq!(TokenType::RETURN, st.token_literal());
+        },
+        _ => {
+          assert!(false, "all statements should be let statements");
+        }
+      }
+
+    }
+  }
 }
