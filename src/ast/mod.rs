@@ -1,10 +1,13 @@
 pub mod expression_node;
 mod expression;
 pub mod identifier;
+mod expression_statement;
 pub mod let_statement;
 mod program;
+mod parse_fn;
 mod return_statement;
 mod statement_node;
 mod statement;
 mod token_node;
 mod parser;
+mod operators;

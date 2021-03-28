@@ -5,28 +5,26 @@ use super::statement_node::StatementNode;
 use super::token_node::TokenNode;
 
 #[derive(Debug, Clone)]
-pub struct ReturnStatement {
+pub struct ExpressionStatement {
   pub token: Token,
   pub value: Option<Expression>,
 }
 
-impl<'a> TokenNode for ReturnStatement {
+impl<'a> TokenNode for ExpressionStatement {
   fn token_literal(&self) -> TokenType {
-      TokenType::RETURN
+    self.token.token_type
   }
+
   fn string(&self) -> String {
-    let mut s = String::new();
-    s.push_str(self.token_literal().to_string().as_str());
-    s.push_str(" ");
     if self.value.is_some() {
-      s.push_str(self.value.clone().unwrap().string().as_str());
+      return self.value.clone().unwrap().string();
     }
-    s.push(';');
-    s
+    String::from("")
   }
+
 }
 
-impl<'a> StatementNode for ReturnStatement {
+impl StatementNode for ExpressionStatement {
   fn statement_node(&self) {
 
   }

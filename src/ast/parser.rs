@@ -1,8 +1,8 @@
-use std::borrow::Borrow;
+use std::{collections::HashMap};
 
-use crate::lexer::Lexer;
+use crate::{lexer::Lexer, token};
 
-use super::{identifier, let_statement::{LetStatement}, return_statement::ReturnStatement};
+use super::{expression::Expression, expression_statement::ExpressionStatement, let_statement::{LetStatement}, operators::Operator, parse_fn::{InfixParseFn, PrefixParseFn}, return_statement::ReturnStatement};
 use super::identifier::Identifier;
 use super::statement::Statement;
 use super::program::Program;
@@ -13,6 +13,7 @@ pub struct Parser<'a> {
   errors: Vec<String>,
   current_token: Option<Token>,
   peek_token: Option<Token>,
+
 }
 
 impl<'a> Parser<'a> {
@@ -26,6 +27,26 @@ impl<'a> Parser<'a> {
     p.next_token();
     p.next_token();
     p
+  }
+
+  fn parse_prefix(&mut self, token_type: TokenType) -> Option<Expression> {
+    match token_type {
+      TokenType::IDENT => {
+        let identifier = self.parse_identifier();
+        Some(identifier)
+      },
+      _ => None,
+    }
+  }
+
+  fn parse_identifier(&self) -> Expression {
+    let token = self.current_token.clone().unwrap();
+    let literal = String::from(token.literal.as_str());
+
+    Expression::Identifier(Identifier{
+      token: token,
+      value: literal,
+    })
   }
 
   fn next_token(&mut self) {
@@ -106,7 +127,6 @@ impl<'a> Parser<'a> {
       return None;
     }
 
-
     let t = self.current_token.clone().unwrap();
     let token = Token{
       token_type: t.token_type,
@@ -123,6 +143,34 @@ impl<'a> Parser<'a> {
     }
     self.next_token();
     Some(stmt)
+  }
+
+  fn parse_expression(&mut self, operator: Operator) -> Option<Expression> {
+    if self.current_token.is_none() {
+      return None;
+    }
+
+    let t = self.current_token.clone().unwrap();
+    self.parse_prefix(t.token_type)
+  }
+
+  fn parse_expression_statement(&mut self) -> Option<ExpressionStatement> {
+    if self.current_token.is_none() {
+      return None;
+    }
+
+    let t = self.current_token.clone().unwrap();
+    let expression = self.parse_expression(Operator::LOWEST);
+    let expression_statement = ExpressionStatement{
+      token: t,
+      value: expression,
+    };
+    self.next_token();
+    if !self.current_token_is(TokenType::SEMICOLON) {
+      self.next_token();
+    }
+    self.next_token();
+    Some(expression_statement)
   }
 
 
@@ -145,6 +193,13 @@ impl<'a> Parser<'a> {
           return None;
         }
         Some(Statement::ReturnStatement(st.unwrap()))
+      },
+      TokenType::IDENT => {
+        let st = self.parse_expression_statement();
+        if st.is_none() {
+          return None;
+        }
+        Some(Statement::ExpressionStatement(st.unwrap()))
       },
       _ => {
         None
@@ -237,7 +292,27 @@ mod tests {
           assert!(false, "all statements should be let statements");
         }
       }
+    }
+  }
 
+  #[test]
+  fn identifier_statement() {
+    let input = "foobar;";
+    let mut l = Lexer::new(input);
+    let mut p = Parser::new(&mut l);
+    let program = p.parse_program();
+    assert_eq!(1, program.statements.len());
+    let statement = program.statements[0].clone();
+    match statement {
+      Statement::ExpressionStatement(st) => {
+        assert_eq!(TokenType::IDENT, st.token_literal());
+        assert_eq!(true, st.value.is_some());
+        let value = st.value.unwrap();
+        assert_eq!(String::from("foobar"), value.string());
+      },
+      _ => {
+        assert!(false, "expected identifier statement");
+      }
     }
   }
 }

@@ -11,4 +11,8 @@ impl<'a> TokenNode for Identifier {
   fn token_literal(&self) -> TokenType {
       TokenType::EQ
   }
+
+  fn string(&self) -> String {
+    self.value.clone()
+  }
 }
