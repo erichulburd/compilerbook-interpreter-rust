@@ -10,9 +10,13 @@ pub struct ExpressionStatement {
   pub value: Option<Expression>,
 }
 
-impl<'a> TokenNode for ExpressionStatement {
-  fn token_literal(&self) -> TokenType {
+impl TokenNode for ExpressionStatement {
+  fn token_type(&self) -> TokenType {
     self.token.token_type
+  }
+
+  fn token_literal(&self) -> String {
+    self.token.literal.clone()
   }
 
   fn string(&self) -> String {

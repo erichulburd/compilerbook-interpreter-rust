@@ -1,13 +1,14 @@
 use crate::token::{Token, TokenType};
-use super::token_node::{TokenNode};
+
+use super::token_node::TokenNode;
 
 #[derive(Debug, Clone)]
-pub struct Identifier {
+pub struct IntegerLiteral {
   pub token: Token,
-  pub value: String,
+  pub value: i64,
 }
 
-impl TokenNode for Identifier {
+impl TokenNode for IntegerLiteral {
   fn token_type(&self) -> TokenType {
     self.token.token_type
   }
@@ -17,6 +18,6 @@ impl TokenNode for Identifier {
   }
 
   fn string(&self) -> String {
-    self.value.clone()
+    self.token.literal.clone()
   }
 }

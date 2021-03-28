@@ -11,9 +11,13 @@ pub struct LetStatement {
   pub value: Option<Expression>,
 }
 
-impl<'a> TokenNode for LetStatement {
-  fn token_literal(&self) -> TokenType {
-      TokenType::LET
+impl TokenNode for LetStatement {
+  fn token_type(&self) -> TokenType {
+    TokenType::LET
+  }
+
+  fn token_literal(&self) -> String {
+    String::from("LET")
   }
 
   fn string(&self) -> String {

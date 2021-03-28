@@ -14,8 +14,22 @@ pub enum Statement {
   ReturnStatement(ReturnStatement),
 }
 
-impl<'a> TokenNode for Statement {
-  fn token_literal(&self) -> TokenType {
+impl TokenNode for Statement {
+  fn token_type(&self) -> TokenType {
+    match self {
+      Statement::ExpressionStatement(st) => {
+        st.token_type()
+      },
+      Statement::LetStatement(st) => {
+        st.token_type()
+      },
+      Statement::ReturnStatement(st) => {
+        st.token_type()
+      }
+    }
+  }
+
+  fn token_literal(&self) -> String {
     match self {
       Statement::ExpressionStatement(st) => {
         st.token_literal()

@@ -7,12 +7,19 @@ pub struct Program {
 }
 
 impl TokenNode for Program {
-  fn token_literal(&self) -> TokenType {
+  fn token_type(&self) -> TokenType {
       if self.statements.len() > 0 {
-        self.statements[0].token_literal()
+        self.statements[0].token_type()
       } else {
         TokenType::EOF
       }
+  }
+  fn token_literal(&self) -> String {
+    if self.statements.len() > 0 {
+      self.statements[0].token_literal()
+    } else {
+      String::from("")
+    }
   }
 
   fn string(&self) -> String {

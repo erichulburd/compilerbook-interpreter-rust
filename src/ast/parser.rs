@@ -2,7 +2,7 @@ use std::{collections::HashMap};
 
 use crate::{lexer::Lexer, token};
 
-use super::{expression::Expression, expression_statement::ExpressionStatement, let_statement::{LetStatement}, operators::Operator, parse_fn::{InfixParseFn, PrefixParseFn}, return_statement::ReturnStatement};
+use super::{expression::Expression, expression_statement::ExpressionStatement, integer_literal::IntegerLiteral, let_statement::{LetStatement}, operators::Operator, parse_fn::{InfixParseFn, PrefixParseFn}, return_statement::ReturnStatement};
 use super::identifier::Identifier;
 use super::statement::Statement;
 use super::program::Program;
@@ -30,9 +30,14 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_prefix(&mut self, token_type: TokenType) -> Option<Expression> {
+    println!("parse prefix {}", token_type);
     match token_type {
       TokenType::IDENT => {
         let identifier = self.parse_identifier();
+        Some(identifier)
+      },
+      TokenType::INT => {
+        let identifier = self.parse_integer();
         Some(identifier)
       },
       _ => None,
@@ -44,6 +49,16 @@ impl<'a> Parser<'a> {
     let literal = String::from(token.literal.as_str());
 
     Expression::Identifier(Identifier{
+      token: token,
+      value: literal,
+    })
+  }
+
+  fn parse_integer(&self) -> Expression {
+    let token = self.current_token.clone().unwrap();
+    let literal = token.literal.parse::<i64>().unwrap();
+
+    Expression::IntegerLiteral(IntegerLiteral{
       token: token,
       value: literal,
     })
@@ -194,7 +209,7 @@ impl<'a> Parser<'a> {
         }
         Some(Statement::ReturnStatement(st.unwrap()))
       },
-      TokenType::IDENT => {
+      TokenType::IDENT | TokenType::INT => {
         let st = self.parse_expression_statement();
         if st.is_none() {
           return None;
@@ -233,6 +248,7 @@ mod tests {
     use crate::lexer::Lexer;
     use crate::token::{TokenType};
     use super::super::token_node::TokenNode;
+    use super::super::expression::Expression;
 
     use super::Program;
     use super::Statement;
@@ -259,7 +275,7 @@ mod tests {
       let statement = &program.statements[i];
       match statement {
         Statement::LetStatement(let_statement) => {
-          assert_eq!(TokenType::LET, let_statement.token_literal());
+          assert_eq!(TokenType::LET, let_statement.token_type());
           assert_eq!(String::from(*id), let_statement.name.value);
         },
         _ => {
@@ -286,7 +302,7 @@ mod tests {
     for (i, statement) in program.statements.iter().enumerate() {
       match statement {
         Statement::ReturnStatement(st) => {
-          assert_eq!(TokenType::RETURN, st.token_literal());
+          assert_eq!(TokenType::RETURN, st.token_type());
         },
         _ => {
           assert!(false, "all statements should be let statements");
@@ -296,7 +312,7 @@ mod tests {
   }
 
   #[test]
-  fn identifier_statement() {
+  fn identifier_expression() {
     let input = "foobar;";
     let mut l = Lexer::new(input);
     let mut p = Parser::new(&mut l);
@@ -305,13 +321,50 @@ mod tests {
     let statement = program.statements[0].clone();
     match statement {
       Statement::ExpressionStatement(st) => {
-        assert_eq!(TokenType::IDENT, st.token_literal());
+        assert_eq!(TokenType::IDENT, st.token_type());
         assert_eq!(true, st.value.is_some());
-        let value = st.value.unwrap();
-        assert_eq!(String::from("foobar"), value.string());
+        let expression = st.value.unwrap();
+        assert_eq!(String::from("foobar"), expression.string());
+        match expression {
+          Expression::Identifier(identifier) => {
+            assert_eq!(String::from("foobar"), identifier.value)
+          },
+          _ => {
+            assert!(false, "expected identifier expression");
+          }
+        }
       },
       _ => {
-        assert!(false, "expected identifier statement");
+        assert!(false, "expected expression statement");
+      }
+    }
+  }
+
+  #[test]
+  fn integer_literal_expression() {
+    let input = "5;";
+    let mut l = Lexer::new(input);
+    let mut p = Parser::new(&mut l);
+    let program = p.parse_program();
+    assert_eq!(1, program.statements.len());
+    let statement = program.statements[0].clone();
+    match statement {
+      Statement::ExpressionStatement(st) => {
+        assert_eq!(TokenType::INT, st.token_type());
+        assert_eq!(true, st.value.is_some());
+        let expression = st.value.unwrap();
+        assert_eq!(String::from("5"), expression.string());
+        match expression {
+          Expression::IntegerLiteral(integer_literal) => {
+            assert_eq!(5, integer_literal.value)
+          },
+          _ => {
+            assert!(false, "expected integer literal");
+          }
+        }
+      },
+      _ => {
+        assert!(false, "expected expression statement");
       }
     }
   }

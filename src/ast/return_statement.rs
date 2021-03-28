@@ -10,10 +10,16 @@ pub struct ReturnStatement {
   pub value: Option<Expression>,
 }
 
-impl<'a> TokenNode for ReturnStatement {
-  fn token_literal(&self) -> TokenType {
+impl TokenNode for ReturnStatement {
+  fn token_type(&self) -> TokenType {
       TokenType::RETURN
   }
+
+  fn token_literal(&self) -> String {
+      String::from("RETURN")
+  }
+
+
   fn string(&self) -> String {
     let mut s = String::new();
     s.push_str(self.token_literal().to_string().as_str());
