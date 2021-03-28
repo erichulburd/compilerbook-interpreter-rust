@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashMap};
+use std::{cmp::Ordering};
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Operator {
@@ -31,3 +31,14 @@ fn get_operator_precedence(operator: &Operator) -> i8 {
   }
 }
 
+fn get_operator_string(operator: &Operator) -> String {
+  match operator {
+    Operator::LOWEST => String::from("lowest"),
+    Operator::EQUALS => String::from("equals"),
+    Operator::LESSGREATER => String::from("lesser greater"),
+    Operator::SUM => String::from("sum"),
+    Operator::PRODUCT => String::from("product"),
+    Operator::PREFIX => String::from("prefix"),
+    Operator::CALL => String::from("call"),
+  }
+}

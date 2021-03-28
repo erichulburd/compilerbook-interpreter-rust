@@ -1,8 +1,8 @@
 use std::{collections::HashMap};
 
-use crate::{lexer::Lexer, token};
+use crate::{lexer::Lexer};
 
-use super::{expression::Expression, expression_statement::ExpressionStatement, integer_literal::IntegerLiteral, let_statement::{LetStatement}, operators::Operator, parse_fn::{InfixParseFn, PrefixParseFn}, return_statement::ReturnStatement};
+use super::{expression::Expression, expression_statement::ExpressionStatement, integer_literal::IntegerLiteral, let_statement::{LetStatement}, operators::Operator, prefix_expression::PrefixExpression, return_statement::ReturnStatement};
 use super::identifier::Identifier;
 use super::statement::Statement;
 use super::program::Program;
@@ -30,17 +30,27 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_prefix(&mut self, token_type: TokenType) -> Option<Expression> {
-    println!("parse prefix {}", token_type);
     match token_type {
       TokenType::IDENT => {
         let identifier = self.parse_identifier();
+        Some(identifier)
+      },
+      TokenType::BANG => {
+        let identifier = self.parse_prefix_expression();
+        Some(identifier)
+      },
+      TokenType::MINUS => {
+        let identifier = self.parse_prefix_expression();
         Some(identifier)
       },
       TokenType::INT => {
         let identifier = self.parse_integer();
         Some(identifier)
       },
-      _ => None,
+      _ => {
+        self.errors.push(format!("no prefix parse function for {}", token_type));
+        None
+      },
     }
   }
 
@@ -61,6 +71,22 @@ impl<'a> Parser<'a> {
     Expression::IntegerLiteral(IntegerLiteral{
       token: token,
       value: literal,
+    })
+  }
+
+  fn parse_prefix_expression(&mut self) -> Expression {
+    let token = self.current_token.clone().unwrap();
+    let literal = token.literal.clone();
+    self.next_token();
+    let right = self.parse_expression(Operator::PREFIX);
+    let mut right_box = None;
+    if right.is_some() {
+      right_box = Some(Box::new(right.unwrap()));
+    }
+    Expression::PrefixExpression(PrefixExpression{
+      token: token,
+      operator: literal,
+      right: right_box,
     })
   }
 
@@ -172,6 +198,8 @@ impl<'a> Parser<'a> {
   fn parse_expression_statement(&mut self) -> Option<ExpressionStatement> {
     if self.current_token.is_none() {
       return None;
+    } else if self.current_token_is(TokenType::EOF) {
+      return None;
     }
 
     let t = self.current_token.clone().unwrap();
@@ -187,7 +215,6 @@ impl<'a> Parser<'a> {
     self.next_token();
     Some(expression_statement)
   }
-
 
   fn parse_statement(&mut self) -> Option<Statement> {
     if self.current_token.is_none() {
@@ -209,15 +236,12 @@ impl<'a> Parser<'a> {
         }
         Some(Statement::ReturnStatement(st.unwrap()))
       },
-      TokenType::IDENT | TokenType::INT => {
+      _ => {
         let st = self.parse_expression_statement();
         if st.is_none() {
           return None;
         }
         Some(Statement::ExpressionStatement(st.unwrap()))
-      },
-      _ => {
-        None
       }
     }
   }
@@ -299,7 +323,7 @@ mod tests {
     assert_eq!(3, program.statements.len(), "unexpected number of statements parsed");
     assert_eq!(0, p.errors.len());
 
-    for (i, statement) in program.statements.iter().enumerate() {
+    for (_, statement) in program.statements.iter().enumerate() {
       match statement {
         Statement::ReturnStatement(st) => {
           assert_eq!(TokenType::RETURN, st.token_type());
@@ -365,6 +389,72 @@ mod tests {
       },
       _ => {
         assert!(false, "expected expression statement");
+      }
+    }
+  }
+
+  fn test_integer_literal(expression: Box<Expression>, value: i64) -> Result<bool, String> {
+    match *expression {
+      Expression::IntegerLiteral(integer_literal) => {
+        if integer_literal.value != value {
+          return Err(
+            format!(
+              "expected integer literal value {} but received {}",
+              value,
+              integer_literal.value));
+        }
+        if integer_literal.token_literal() != format!("{}", value) {
+          return Err(
+            format!(
+              "expected integer literal token literal {} but received {}",
+              value,
+              integer_literal.value));
+        }
+        Ok(true)
+      },
+      _ => {
+        Err(String::from("expected integeral literal"))
+      }
+    }
+  }
+
+  #[test]
+  fn parse_prefix_expression() {
+    let tests: Vec<(&str, &str, i64)> = vec![
+      ("!5", "!", 5),
+      ("-5", "-", 5),
+    ];
+    for (input, operator, value) in tests.iter() {
+      let mut l = Lexer::new(*input);
+      let mut p = Parser::new(&mut l);
+      let program = p.parse_program();
+      assert_eq!(0, p.errors.len());
+
+      assert_eq!(1, program.statements.len());
+      let statement = program.statements[0].clone();
+      match statement {
+        Statement::ExpressionStatement(expression_statement) => {
+          let expression = expression_statement.value.clone().unwrap();
+          match expression {
+            // Expression::Identifier(prefix_expression) => {
+            Expression::PrefixExpression(prefix_expression) => {
+              assert_eq!(String::from(*operator), prefix_expression.operator);
+              assert!(prefix_expression.right.is_some());
+              match test_integer_literal(prefix_expression.right.unwrap(), *value) {
+                Err(e) => {
+                  assert!(false, format!("{}", e));
+                },
+                _ => {},
+              }
+            },
+            _ => {
+              assert!(false, "expected prefix expression");
+            }
+          }
+        },
+        _ => {
+          assert!(false, "expected expression statement");
+        }
       }
     }
   }

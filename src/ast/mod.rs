@@ -1,5 +1,6 @@
 pub mod expression_node;
 mod expression;
+mod prefix_expression;
 pub mod identifier;
 mod expression_statement;
 pub mod let_statement;
