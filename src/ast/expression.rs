@@ -1,11 +1,12 @@
 use std::path::Prefix;
 
-use super::{identifier::Identifier, integer_literal::IntegerLiteral, prefix_expression::PrefixExpression, token_node::TokenNode};
+use super::{identifier::Identifier, infix_expression::InfixExpression, integer_literal::IntegerLiteral, prefix_expression::PrefixExpression, token_node::TokenNode};
 
 #[derive(Debug, Clone)]
 pub enum Expression {
   Identifier(Identifier),
   IntegerLiteral(IntegerLiteral),
+  InfixExpression(InfixExpression),
   PrefixExpression(PrefixExpression),
 }
 
@@ -20,6 +21,9 @@ impl Expression {
       },
       Expression::PrefixExpression(prefix_expression) => {
         prefix_expression.string()
+      },
+      Expression::InfixExpression(infix_expression) => {
+        infix_expression.string()
       },
     }
   }

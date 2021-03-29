@@ -2,7 +2,17 @@ use std::{collections::HashMap};
 
 use crate::{lexer::Lexer};
 
-use super::{expression::Expression, expression_statement::ExpressionStatement, integer_literal::IntegerLiteral, let_statement::{LetStatement}, operators::Operator, prefix_expression::PrefixExpression, return_statement::ReturnStatement};
+use super::{
+  expression::Expression,
+  expression_statement::ExpressionStatement,
+  infix_expression::InfixExpression,
+  integer_literal::IntegerLiteral,
+  let_statement::{LetStatement},
+  operators::Operator,
+  prefix_expression::PrefixExpression,
+  return_statement::ReturnStatement,
+};
+use super::operators::get_token_type_operator_precedence;
 use super::identifier::Identifier;
 use super::statement::Statement;
 use super::program::Program;
@@ -35,20 +45,15 @@ impl<'a> Parser<'a> {
         let identifier = self.parse_identifier();
         Some(identifier)
       },
-      TokenType::BANG => {
-        let identifier = self.parse_prefix_expression();
-        Some(identifier)
-      },
-      TokenType::MINUS => {
-        let identifier = self.parse_prefix_expression();
-        Some(identifier)
+      TokenType::BANG | TokenType::MINUS => {
+        let prefix_expression = self.parse_prefix_expression();
+        Some(prefix_expression)
       },
       TokenType::INT => {
-        let identifier = self.parse_integer();
-        Some(identifier)
+        let integer_expression = self.parse_integer();
+        Some(integer_expression)
       },
       _ => {
-        self.errors.push(format!("no prefix parse function for {}", token_type));
         None
       },
     }
@@ -90,6 +95,36 @@ impl<'a> Parser<'a> {
     })
   }
 
+  fn is_infix_token(&mut self, token_type: TokenType, left: Expression) -> bool {
+    match token_type {
+      TokenType::PLUS | TokenType::MINUS | TokenType::SLASH | TokenType::ASTERISK |
+      TokenType::EQ | TokenType::NotEq | TokenType::GT | TokenType::LT => {
+        true
+      },
+      _ => {
+        false
+      },
+    }
+  }
+
+  fn parse_infix_expression(&mut self, left: Expression) -> InfixExpression {
+    let token = self.current_token.clone().unwrap();
+    let operator = token.clone().literal;
+    let precedence = self.peek_precedence();
+    self.next_token();
+
+    let right = self.parse_expression(precedence);
+    let infix_expression = InfixExpression{
+      token: token,
+      operator: operator,
+      left: Some(Box::new(left)),
+      right: if right.is_some() { Some(Box::new(right.unwrap())) } else { None },
+    };
+
+    infix_expression
+  }
+
+
   fn next_token(&mut self) {
     self.current_token = self.peek_token.clone();
     self.peek_token = Some(self.l.next_token());
@@ -115,11 +150,19 @@ impl<'a> Parser<'a> {
     }
   }
 
+  fn peek_precedence(&self) -> Operator {
+    get_token_type_operator_precedence(self.peek_token.clone().unwrap().token_type)
+  }
+
   fn current_token_is(&self, tt: TokenType) -> bool {
     if self.current_token.is_none() {
       return false;
     }
     tt == self.current_token.clone().unwrap().token_type
+  }
+
+  fn current_precedence(&self) -> Operator {
+    get_token_type_operator_precedence(self.current_token.clone().unwrap().token_type)
   }
 
   fn parse_let_statement(&mut self) -> Option<LetStatement> {
@@ -190,9 +233,27 @@ impl<'a> Parser<'a> {
     if self.current_token.is_none() {
       return None;
     }
-
-    let t = self.current_token.clone().unwrap();
-    self.parse_prefix(t.token_type)
+    let prefix = self.parse_prefix(
+      self.current_token.clone().unwrap().token_type);
+    if prefix.is_none() {
+      self.errors.push(
+        format!(
+          "no prefix parse function for {}",
+          self.current_token.clone().unwrap().token_type));
+      return None;
+    }
+    let mut left = prefix.unwrap();
+    while !self.peek_token_is(TokenType::SEMICOLON) && operator < self.peek_precedence() {
+      let is_infix_token = self.is_infix_token(
+        self.peek_token.clone().unwrap().token_type,
+        left.clone());
+      if !is_infix_token {
+        return Some(left);
+      }
+      self.next_token();
+      left = Expression::InfixExpression(self.parse_infix_expression(left));
+    }
+    Some(left)
   }
 
   fn parse_expression_statement(&mut self) -> Option<ExpressionStatement> {
@@ -449,6 +510,59 @@ mod tests {
             },
             _ => {
               assert!(false, "expected prefix expression");
+            }
+          }
+        },
+        _ => {
+          assert!(false, "expected expression statement");
+        }
+      }
+    }
+  }
+
+  #[test]
+  fn parse_infix_expression() {
+    let tests: Vec<(&str, i64, &str, i64)> = vec![
+      ("5 + 6;", 5, "+", 6),
+      ("5 - 6;", 5, "-", 6),
+      ("5 * 6;", 5, "*", 6),
+      ("5 / 6;", 5, "/", 6),
+      ("5 > 6;", 5, ">", 6),
+      ("5 < 6;", 5, "<", 6),
+      ("5 == 6;", 5, "==", 6),
+      ("5 != 6;", 5, "!=", 6),
+    ];
+    for (input, left_value, operator, right_value) in tests.iter() {
+      let mut l = Lexer::new(*input);
+      let mut p = Parser::new(&mut l);
+      let program = p.parse_program();
+      assert_eq!(1, program.statements.len());
+      assert_eq!(0, p.errors.len(), "{}", p.errors.join(", "));
+
+      let statement = program.statements[0].clone();
+      match statement {
+        Statement::ExpressionStatement(expression_statement) => {
+          let expression = expression_statement.value.clone().unwrap();
+          match expression {
+            Expression::InfixExpression(infix_expression) => {
+              assert_eq!(String::from(*operator), infix_expression.operator);
+              assert!(infix_expression.left.is_some());
+              match test_integer_literal(infix_expression.left.unwrap(), *left_value) {
+                Err(e) => {
+                  assert!(false, format!("{}", e));
+                },
+                _ => {},
+              }
+              assert!(infix_expression.right.is_some());
+              match test_integer_literal(infix_expression.right.unwrap(), *right_value) {
+                Err(e) => {
+                  assert!(false, format!("{}", e));
+                },
+                _ => {},
+              }
+            },
+            _ => {
+              assert!(false, "expected infix expression");
             }
           }
         },

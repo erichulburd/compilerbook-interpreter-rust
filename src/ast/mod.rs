@@ -1,5 +1,6 @@
 pub mod expression_node;
 mod expression;
+mod infix_expression;
 mod prefix_expression;
 pub mod identifier;
 mod expression_statement;
