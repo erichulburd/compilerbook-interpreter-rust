@@ -3,10 +3,10 @@
 #[macro_use]
 extern crate lazy_static;
 
-mod token;
+mod ast;
 mod lexer;
 mod repl;
-mod ast;
+mod token;
 
 fn main() {
     repl::start();

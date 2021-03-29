@@ -36,7 +36,9 @@ pub enum TokenType {
 }
 
 impl Default for TokenType {
-    fn default() -> Self { TokenType::EOF }
+    fn default() -> Self {
+        TokenType::EOF
+    }
 }
 
 impl fmt::Display for TokenType {
@@ -98,10 +100,9 @@ pub fn lookup_keyword(literal: &str) -> TokenType {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use super::{TokenType, lookup_keyword};
+    use super::{lookup_keyword, TokenType};
 
     #[test]
     fn get_keyword() {
@@ -109,5 +110,4 @@ mod tests {
         assert_eq!(TokenType::FUNCTION, lookup_keyword("fn"));
         assert_eq!(TokenType::IDENT, lookup_keyword("blah"));
     }
-
 }

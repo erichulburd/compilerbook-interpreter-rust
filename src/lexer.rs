@@ -11,7 +11,7 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Lexer<'a> {
-        let mut l = Lexer{
+        let mut l = Lexer {
             input: input,
             position: 0,
             read_position: 0,
@@ -50,7 +50,7 @@ impl<'a> Lexer<'a> {
         if token_type.is_some() {
             let literal = String::from(self.ch.unwrap());
             self.read_char();
-            return Token{
+            return Token {
                 token_type: token_type.unwrap(),
                 literal: literal,
             };
@@ -59,13 +59,13 @@ impl<'a> Lexer<'a> {
         if self.ch.unwrap_or('0').is_alphabetic() {
             let literal = self.read_identifier();
             let token_type = token::lookup_keyword(literal.as_str());
-            return Token{
+            return Token {
                 token_type: token_type,
                 literal: literal,
             };
         }
         if self.ch.unwrap_or('a').is_numeric() {
-            return Token{
+            return Token {
                 token_type: TokenType::INT,
                 literal: self.read_number(),
             };
@@ -75,7 +75,7 @@ impl<'a> Lexer<'a> {
             _ => String::from(self.ch.unwrap()),
         };
         self.read_char();
-        Token{
+        Token {
             token_type: TokenType::EOF,
             literal: s,
         }
@@ -116,38 +116,38 @@ impl<'a> Lexer<'a> {
                 if self.peek_char().unwrap_or('0') == '=' {
                     self.read_char();
                     self.read_char();
-                    return Some(Token{
+                    return Some(Token {
                         token_type: TokenType::EQ,
                         literal: String::from("=="),
-                    })
+                    });
                 }
                 None
-            },
+            }
             '!' => {
                 if self.peek_char().unwrap_or('0') == '=' {
                     self.read_char();
                     self.read_char();
-                    return Some(Token{
+                    return Some(Token {
                         token_type: TokenType::NotEq,
                         literal: String::from("!="),
-                    })
+                    });
                 }
                 None
-            },
+            }
             _ => None,
         }
     }
 
     fn peek_char(&self) -> Option<char> {
         if self.read_position as usize >= self.input.len() {
-            return None
+            return None;
         }
         self.input.chars().nth(self.read_position as usize)
     }
 
     fn peek_token(&self) -> Option<char> {
         if self.read_position as usize >= self.input.len() {
-            return None
+            return None;
         }
         self.input.chars().nth(self.read_position as usize)
     }
@@ -159,7 +159,7 @@ mod tests {
 
     use crate::token;
 
-    use super::{Lexer};
+    use super::Lexer;
 
     #[test]
     fn next_token_basic() {
@@ -214,13 +214,11 @@ if (5 < 10) {
             (TokenType::ASSIGN, "="),
             (TokenType::INT, "5"),
             (TokenType::SEMICOLON, ";"),
-
             (TokenType::LET, "let"),
             (TokenType::IDENT, "ten"),
             (TokenType::ASSIGN, "="),
             (TokenType::INT, "10"),
             (TokenType::SEMICOLON, ";"),
-
             (TokenType::LET, "let"),
             (TokenType::IDENT, "add"),
             (TokenType::ASSIGN, "="),
@@ -237,7 +235,6 @@ if (5 < 10) {
             (TokenType::SEMICOLON, ";"),
             (TokenType::RBRACE, "}"),
             (TokenType::SEMICOLON, ";"),
-
             (TokenType::LET, "let"),
             (TokenType::IDENT, "result"),
             (TokenType::ASSIGN, "="),
@@ -248,21 +245,18 @@ if (5 < 10) {
             (TokenType::IDENT, "ten"),
             (TokenType::RPAREN, ")"),
             (TokenType::SEMICOLON, ";"),
-
             (TokenType::BANG, "!"),
             (TokenType::MINUS, "-"),
             (TokenType::SLASH, "/"),
             (TokenType::ASTERISK, "*"),
             (TokenType::INT, "5"),
             (TokenType::SEMICOLON, ";"),
-
             (TokenType::INT, "5"),
             (TokenType::LT, "<"),
             (TokenType::INT, "10"),
             (TokenType::GT, ">"),
             (TokenType::INT, "5"),
             (TokenType::SEMICOLON, ";"),
-
             (TokenType::IF, "if"),
             (TokenType::LPAREN, "("),
             (TokenType::INT, "5"),
@@ -280,17 +274,14 @@ if (5 < 10) {
             (TokenType::FALSE, "false"),
             (TokenType::SEMICOLON, ";"),
             (TokenType::RBRACE, "}"),
-
             (TokenType::INT, "10"),
             (TokenType::EQ, "=="),
             (TokenType::INT, "10"),
             (TokenType::SEMICOLON, ";"),
-
             (TokenType::INT, "10"),
             (TokenType::NotEq, "!="),
             (TokenType::INT, "9"),
             (TokenType::SEMICOLON, ";"),
-
             (TokenType::EOF, ""),
         ];
 
