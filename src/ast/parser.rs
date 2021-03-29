@@ -105,7 +105,7 @@ impl<'a> Parser<'a> {
     fn parse_infix_expression(&mut self, left: Expression) -> InfixExpression {
         let token = self.current_token.clone().unwrap();
         let operator = token.clone().literal;
-        let precedence = self.peek_precedence();
+        let precedence = self.current_precedence();
         self.next_token();
 
         let right = self.parse_expression(precedence);
@@ -238,7 +238,8 @@ impl<'a> Parser<'a> {
         if self.current_token.is_none() {
             return None;
         }
-        let prefix = self.parse_prefix(self.current_token.clone().unwrap().token_type);
+        let prefix = self.parse_prefix(
+          self.current_token.clone().unwrap().token_type);
         if prefix.is_none() {
             self.errors.push(format!(
                 "no prefix parse function for {}",
@@ -572,6 +573,30 @@ mod tests {
                     assert!(false, "expected expression statement");
                 }
             }
+        }
+    }
+    #[test]
+    fn precedence_parsing() {
+        let tests: Vec<(&str, &str)> = vec![
+          ("-a * b", "((-a) * b)"),
+          ("!-a", "(!(-a))"),
+          ("a + b + c", "((a + b) + c)"),
+          ("a + b - c", "((a + b) - c)"),
+          ("a * b * c", "((a * b) * c)"),
+          ("a * b / c", "((a * b) / c)"),
+          ("a + b / c", "(a + (b / c))"),
+          ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+          ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+          ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+          ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+          ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+        ];
+        for (input, expected_output) in tests.iter() {
+          let mut l = Lexer::new(*input);
+          let mut p = Parser::new(&mut l);
+          let program = p.parse_program();
+          assert_eq!(0, p.errors.len(), "{}", p.errors.join(", "));
+          assert_eq!(*expected_output, program.string().as_str());
         }
     }
 }

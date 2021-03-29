@@ -15,7 +15,7 @@ pub fn start() {
     );
 
     let mut handle = stdout.lock();
-    handle.write(String::from(welcome).as_bytes()).unwrap();
+    handle.write_all(String::from(welcome).as_bytes()).unwrap();
 
     loop {
         handle.write_all(PROMPT).unwrap();
