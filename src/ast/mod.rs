@@ -14,3 +14,4 @@ mod return_statement;
 mod statement;
 mod statement_node;
 mod token_node;
+mod trace;
