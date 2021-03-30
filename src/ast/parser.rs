@@ -1,7 +1,7 @@
 use std::collections::HashMap;
+use scopeguard::guard;
 
 use crate::lexer::Lexer;
-
 use super::identifier::Identifier;
 use super::operators::get_token_type_operator_precedence;
 use super::program::Program;
@@ -35,6 +35,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_prefix(&mut self, token_type: TokenType) -> Option<Expression> {
+        defer!(println!("parse prefix"));
         match token_type {
             TokenType::IDENT => {
                 let identifier = self.parse_identifier();
