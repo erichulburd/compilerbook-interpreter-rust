@@ -461,27 +461,6 @@ mod tests {
         }
     }
 
-    fn test_integer_literal(expression: Box<Expression>, value: i64) -> Result<bool, String> {
-        match *expression {
-            Expression::IntegerLiteral(integer_literal) => {
-                if integer_literal.value != value {
-                    return Err(format!(
-                        "expected integer literal value {} but received {}",
-                        value, integer_literal.value
-                    ));
-                }
-                if integer_literal.token_literal() != format!("{}", value) {
-                    return Err(format!(
-                        "expected integer literal token literal {} but received {}",
-                        value, integer_literal.value
-                    ));
-                }
-                Ok(true)
-            }
-            _ => Err(String::from("expected integeral literal")),
-        }
-    }
-
     #[test]
     fn parse_prefix_expression() {
         let tests: Vec<(&str, &str, i64)> = vec![("!5", "!", 5), ("-5", "-", 5)];
@@ -598,6 +577,98 @@ mod tests {
           let program = p.parse_program();
           assert_eq!(0, p.errors.len(), "{}", p.errors.join(", "));
           assert_eq!(*expected_output, program.string().as_str());
+        }
+    }
+
+    enum ExpressionExpectation {
+        Integer(i64),
+        Identifier(String),
+    }
+
+    fn test_infix_expression(
+        expression: Box<Expression>,
+        operator: String,
+        left: ExpressionExpectation,
+        right: ExpressionExpectation,
+    ) -> Result<(), String> {
+        match *expression {
+            Expression::InfixExpression(infix_expression) => {
+                assert_eq!(operator, infix_expression.operator);
+                assert!(infix_expression.left.is_some());
+                assert!(infix_expression.right.is_some());
+                match test_literal_expression(infix_expression.left.unwrap(), left) {
+                    Err(e) => {
+                        return Err(format!("unexpected left expression {}", e));
+                    },
+                    _ => {},
+                }
+                match test_literal_expression(infix_expression.right.unwrap(), right) {
+                    Err(e) => {
+                        return Err(format!("unexpected right expression {}", e));
+                    },
+                    _ => {},
+                }
+                Ok(())
+            },
+            _ => {
+               Err(String::from("expected infix expression"))
+            }
+        }
+    }
+
+
+    fn test_literal_expression(expression: Box<Expression>, expectation: ExpressionExpectation) -> Result<(), String> {
+        match expectation {
+            ExpressionExpectation::Identifier( value) => {
+                test_identifier(expression, value)
+            },
+            ExpressionExpectation::Integer(value) => {
+                test_integer_literal(expression, value)
+            }
+        }
+    }
+
+    fn test_integer_literal(expression: Box<Expression>, value: i64) -> Result<(), String> {
+        match *expression {
+            Expression::IntegerLiteral(integer_literal) => {
+                if integer_literal.value != value {
+                    return Err(format!(
+                        "expected integer literal value {} but received {}",
+                        value, integer_literal.value
+                    ));
+                }
+                if integer_literal.token_literal() != format!("{}", value) {
+                    return Err(format!(
+                        "expected integer literal token literal {} but received {}",
+                        value, integer_literal.value
+                    ));
+                }
+                Ok(())
+            }
+            _ => Err(String::from("expected integeral literal")),
+        }
+    }
+
+    fn test_identifier(expression: Box<Expression>, value: String) -> Result<(), String> {
+        match *expression {
+            Expression::Identifier(identifier_expression) => {
+                if identifier_expression.value != value {
+                    return Err(format!(
+                        "expected identifier expression value {} but received {}",
+                        value, identifier_expression.value
+                    ));
+                }
+                if identifier_expression.token_literal() != format!("{}", value) {
+                    return Err(format!(
+                        "expected identifier expression literal {} but received {}",
+                        value, identifier_expression.value
+                    ));
+                }
+                Ok(())
+            },
+            _ => {
+                Err(String::from("expected identifier expressions"))
+            }
         }
     }
 }
