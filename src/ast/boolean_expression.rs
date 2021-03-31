@@ -17,10 +17,10 @@ impl TokenNode for BooleanExpression {
     }
 
     fn string(&self) -> String {
-      format!("{}", self.value)
+        format!("{}", self.value)
     }
 }
 
 impl StatementNode for BooleanExpression {
-  fn statement_node(&self) {}
+    fn statement_node(&self) {}
 }

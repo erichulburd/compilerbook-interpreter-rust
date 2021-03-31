@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
-#[macro_use(defer)] extern crate scopeguard;
+#[macro_use(defer)]
+extern crate scopeguard;
 
 mod ast;
 mod lexer;

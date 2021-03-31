@@ -1,17 +1,17 @@
-use std::collections::HashMap;
 use scopeguard::guard;
+use std::collections::HashMap;
 
-use crate::lexer::Lexer;
-use super::{boolean_expression::BooleanExpression, identifier::Identifier};
 use super::operators::get_token_type_operator_precedence;
 use super::program::Program;
 use super::statement::Statement;
+use super::{boolean_expression::BooleanExpression, identifier::Identifier};
 use super::{
     expression::Expression, expression_statement::ExpressionStatement,
     infix_expression::InfixExpression, integer_literal::IntegerLiteral,
     let_statement::LetStatement, operators::Operator, prefix_expression::PrefixExpression,
     return_statement::ReturnStatement,
 };
+use crate::lexer::Lexer;
 use crate::token::{Token, TokenType};
 
 pub struct Parser<'a> {
@@ -253,8 +253,7 @@ impl<'a> Parser<'a> {
         if self.current_token.is_none() {
             return None;
         }
-        let prefix = self.parse_prefix(
-          self.current_token.clone().unwrap().token_type);
+        let prefix = self.parse_prefix(self.current_token.clone().unwrap().token_type);
         if prefix.is_none() {
             self.errors.push(format!(
                 "no prefix parse function for {}",
@@ -431,7 +430,7 @@ mod tests {
                 assert_eq!(true, st.value.is_some());
                 let expression = st.value.unwrap();
                 match test_identifier(Box::from(expression), String::from("foobar")) {
-                    Ok(()) => {},
+                    Ok(()) => {}
                     Err(e) => assert!(false, "{}", e),
                 }
             }
@@ -455,7 +454,7 @@ mod tests {
                 assert_eq!(true, st.value.is_some());
                 let expression = st.value.unwrap();
                 match test_integer_literal(Box::from(expression), 5) {
-                    Ok(()) => {},
+                    Ok(()) => {}
                     Err(e) => assert!(false, "{}", e),
                 }
             }
@@ -479,7 +478,7 @@ mod tests {
                     assert_eq!(true, st.value.is_some());
                     let expression = st.value.unwrap();
                     match test_boolean_expression(Box::from(expression), *value) {
-                        Ok(()) => {},
+                        Ok(()) => {}
                         Err(e) => assert!(false, "{}", e),
                     }
                 }
@@ -487,10 +486,8 @@ mod tests {
                     assert!(false, "expected expression statement");
                 }
             }
-
         }
- }
-
+    }
 
     #[test]
     fn parse_prefix_expression() {
@@ -533,14 +530,54 @@ mod tests {
     #[test]
     fn parse_infix_expression() {
         let tests: Vec<(&str, ExpressionExpectation, &str, ExpressionExpectation)> = vec![
-            ("5 + 6;", ExpressionExpectation::Integer(5), "+", ExpressionExpectation::Integer(6)),
-            ("5 - 6;", ExpressionExpectation::Integer(5), "-", ExpressionExpectation::Integer(6)),
-            ("5 * 6;", ExpressionExpectation::Integer(5), "*", ExpressionExpectation::Integer(6)),
-            ("5 / 6;", ExpressionExpectation::Integer(5), "/", ExpressionExpectation::Integer(6)),
-            ("5 > 6;", ExpressionExpectation::Integer(5), ">", ExpressionExpectation::Integer(6)),
-            ("5 < 6;", ExpressionExpectation::Integer(5), "<", ExpressionExpectation::Integer(6)),
-            ("5 == 6;", ExpressionExpectation::Integer(5), "==", ExpressionExpectation::Integer(6)),
-            ("5 != 6;", ExpressionExpectation::Integer(5), "!=", ExpressionExpectation::Integer(6)),
+            (
+                "5 + 6;",
+                ExpressionExpectation::Integer(5),
+                "+",
+                ExpressionExpectation::Integer(6),
+            ),
+            (
+                "5 - 6;",
+                ExpressionExpectation::Integer(5),
+                "-",
+                ExpressionExpectation::Integer(6),
+            ),
+            (
+                "5 * 6;",
+                ExpressionExpectation::Integer(5),
+                "*",
+                ExpressionExpectation::Integer(6),
+            ),
+            (
+                "5 / 6;",
+                ExpressionExpectation::Integer(5),
+                "/",
+                ExpressionExpectation::Integer(6),
+            ),
+            (
+                "5 > 6;",
+                ExpressionExpectation::Integer(5),
+                ">",
+                ExpressionExpectation::Integer(6),
+            ),
+            (
+                "5 < 6;",
+                ExpressionExpectation::Integer(5),
+                "<",
+                ExpressionExpectation::Integer(6),
+            ),
+            (
+                "5 == 6;",
+                ExpressionExpectation::Integer(5),
+                "==",
+                ExpressionExpectation::Integer(6),
+            ),
+            (
+                "5 != 6;",
+                ExpressionExpectation::Integer(5),
+                "!=",
+                ExpressionExpectation::Integer(6),
+            ),
         ];
         for (input, left_value, operator, right_value) in tests.iter() {
             let mut l = Lexer::new(*input);
@@ -556,12 +593,14 @@ mod tests {
                     match test_infix_expression(
                         Box::from(expression),
                         String::from(*operator),
-                        (*left_value).clone(), (*right_value).clone()) {
-                            Ok(()) => {},
-                            Err(e) => {
-                                assert!(false, "{}", e);
-                            }
+                        (*left_value).clone(),
+                        (*right_value).clone(),
+                    ) {
+                        Ok(()) => {}
+                        Err(e) => {
+                            assert!(false, "{}", e);
                         }
+                    }
                 }
                 _ => {
                     assert!(false, "expected expression statement");
@@ -573,25 +612,28 @@ mod tests {
     #[test]
     fn precedence_parsing() {
         let tests: Vec<(&str, &str)> = vec![
-          ("-a * b", "((-a) * b)"),
-          ("!-a", "(!(-a))"),
-          ("a + b + c", "((a + b) + c)"),
-          ("a + b - c", "((a + b) - c)"),
-          ("a * b * c", "((a * b) * c)"),
-          ("a * b / c", "((a * b) / c)"),
-          ("a + b / c", "(a + (b / c))"),
-          ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
-          ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
-          ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
-          ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
-          ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+            ("-a * b", "((-a) * b)"),
+            ("!-a", "(!(-a))"),
+            ("a + b + c", "((a + b) + c)"),
+            ("a + b - c", "((a + b) - c)"),
+            ("a * b * c", "((a * b) * c)"),
+            ("a * b / c", "((a * b) / c)"),
+            ("a + b / c", "(a + (b / c))"),
+            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+            ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+            (
+                "3 + 4 * 5 == 3 * 1 + 4 * 5",
+                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+            ),
         ];
         for (input, expected_output) in tests.iter() {
-          let mut l = Lexer::new(*input);
-          let mut p = Parser::new(&mut l);
-          let program = p.parse_program();
-          assert_eq!(0, p.errors.len(), "{}", p.errors.join(", "));
-          assert_eq!(*expected_output, program.string().as_str());
+            let mut l = Lexer::new(*input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program();
+            assert_eq!(0, p.errors.len(), "{}", p.errors.join(", "));
+            assert_eq!(*expected_output, program.string().as_str());
         }
     }
 
@@ -615,32 +657,28 @@ mod tests {
                 match test_literal_expression(infix_expression.left.unwrap(), left) {
                     Err(e) => {
                         return Err(format!("unexpected left expression {}", e));
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
                 match test_literal_expression(infix_expression.right.unwrap(), right) {
                     Err(e) => {
                         return Err(format!("unexpected right expression {}", e));
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
                 Ok(())
-            },
-            _ => {
-               Err(String::from("expected infix expression"))
             }
+            _ => Err(String::from("expected infix expression")),
         }
     }
 
-
-    fn test_literal_expression(expression: Box<Expression>, expectation: ExpressionExpectation) -> Result<(), String> {
+    fn test_literal_expression(
+        expression: Box<Expression>,
+        expectation: ExpressionExpectation,
+    ) -> Result<(), String> {
         match expectation {
-            ExpressionExpectation::Identifier( value) => {
-                test_identifier(expression, value)
-            },
-            ExpressionExpectation::Integer(value) => {
-                test_integer_literal(expression, value)
-            }
+            ExpressionExpectation::Identifier(value) => test_identifier(expression, value),
+            ExpressionExpectation::Integer(value) => test_integer_literal(expression, value),
         }
     }
 
@@ -702,10 +740,8 @@ mod tests {
                     ));
                 }
                 Ok(())
-            },
-            _ => {
-                Err(String::from("expected identifier expressions"))
             }
+            _ => Err(String::from("expected identifier expressions")),
         }
     }
 }

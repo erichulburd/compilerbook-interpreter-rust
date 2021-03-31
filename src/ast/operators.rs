@@ -36,15 +36,15 @@ fn get_operator_precedence(operator: &Operator) -> i8 {
 
 impl fmt::Display for Operator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-       match *self {
-        Operator::LOWEST => write!(f, "lowest"),
-        Operator::EQUALS => write!(f, "equals"),
-        Operator::LESSGREATER => write!(f, "lesser greater"),
-        Operator::SUM => write!(f, "sum"),
-        Operator::PRODUCT => write!(f, "product"),
-        Operator::PREFIX => write!(f, "prefix"),
-        Operator::CALL => write!(f, "call"),
-       }
+        match *self {
+            Operator::LOWEST => write!(f, "lowest"),
+            Operator::EQUALS => write!(f, "equals"),
+            Operator::LESSGREATER => write!(f, "lesser greater"),
+            Operator::SUM => write!(f, "sum"),
+            Operator::PRODUCT => write!(f, "product"),
+            Operator::PREFIX => write!(f, "prefix"),
+            Operator::CALL => write!(f, "call"),
+        }
     }
 }
 

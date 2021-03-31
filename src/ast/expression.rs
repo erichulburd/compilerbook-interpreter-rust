@@ -1,6 +1,10 @@
 use std::path::Prefix;
 
-use super::{boolean_expression::BooleanExpression, identifier::Identifier, infix_expression::InfixExpression, integer_literal::IntegerLiteral, prefix_expression::PrefixExpression, token_node::TokenNode};
+use super::{
+    boolean_expression::BooleanExpression, identifier::Identifier,
+    infix_expression::InfixExpression, integer_literal::IntegerLiteral,
+    prefix_expression::PrefixExpression, token_node::TokenNode,
+};
 
 #[derive(Debug, Clone)]
 pub enum Expression {
