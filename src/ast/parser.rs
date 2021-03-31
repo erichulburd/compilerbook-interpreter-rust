@@ -416,14 +416,9 @@ mod tests {
                 assert_eq!(TokenType::IDENT, st.token_type());
                 assert_eq!(true, st.value.is_some());
                 let expression = st.value.unwrap();
-                assert_eq!(String::from("foobar"), expression.string());
-                match expression {
-                    Expression::Identifier(identifier) => {
-                        assert_eq!(String::from("foobar"), identifier.value)
-                    }
-                    _ => {
-                        assert!(false, "expected identifier expression");
-                    }
+                match test_identifier(Box::from(expression), String::from("foobar")) {
+                    Ok(()) => {},
+                    Err(e) => assert!(false, "{}", e),
                 }
             }
             _ => {
@@ -445,14 +440,9 @@ mod tests {
                 assert_eq!(TokenType::INT, st.token_type());
                 assert_eq!(true, st.value.is_some());
                 let expression = st.value.unwrap();
-                assert_eq!(String::from("5"), expression.string());
-                match expression {
-                    Expression::IntegerLiteral(integer_literal) => {
-                        assert_eq!(5, integer_literal.value)
-                    }
-                    _ => {
-                        assert!(false, "expected integer literal");
-                    }
+                match test_integer_literal(Box::from(expression), 5) {
+                    Ok(()) => {},
+                    Err(e) => assert!(false, "{}", e),
                 }
             }
             _ => {
@@ -501,15 +491,15 @@ mod tests {
 
     #[test]
     fn parse_infix_expression() {
-        let tests: Vec<(&str, i64, &str, i64)> = vec![
-            ("5 + 6;", 5, "+", 6),
-            ("5 - 6;", 5, "-", 6),
-            ("5 * 6;", 5, "*", 6),
-            ("5 / 6;", 5, "/", 6),
-            ("5 > 6;", 5, ">", 6),
-            ("5 < 6;", 5, "<", 6),
-            ("5 == 6;", 5, "==", 6),
-            ("5 != 6;", 5, "!=", 6),
+        let tests: Vec<(&str, ExpressionExpectation, &str, ExpressionExpectation)> = vec![
+            ("5 + 6;", ExpressionExpectation::Integer(5), "+", ExpressionExpectation::Integer(6)),
+            ("5 - 6;", ExpressionExpectation::Integer(5), "-", ExpressionExpectation::Integer(6)),
+            ("5 * 6;", ExpressionExpectation::Integer(5), "*", ExpressionExpectation::Integer(6)),
+            ("5 / 6;", ExpressionExpectation::Integer(5), "/", ExpressionExpectation::Integer(6)),
+            ("5 > 6;", ExpressionExpectation::Integer(5), ">", ExpressionExpectation::Integer(6)),
+            ("5 < 6;", ExpressionExpectation::Integer(5), "<", ExpressionExpectation::Integer(6)),
+            ("5 == 6;", ExpressionExpectation::Integer(5), "==", ExpressionExpectation::Integer(6)),
+            ("5 != 6;", ExpressionExpectation::Integer(5), "!=", ExpressionExpectation::Integer(6)),
         ];
         for (input, left_value, operator, right_value) in tests.iter() {
             let mut l = Lexer::new(*input);
@@ -522,32 +512,15 @@ mod tests {
             match statement {
                 Statement::ExpressionStatement(expression_statement) => {
                     let expression = expression_statement.value.clone().unwrap();
-                    match expression {
-                        Expression::InfixExpression(infix_expression) => {
-                            assert_eq!(String::from(*operator), infix_expression.operator);
-                            assert!(infix_expression.left.is_some());
-                            match test_integer_literal(infix_expression.left.unwrap(), *left_value)
-                            {
-                                Err(e) => {
-                                    assert!(false, format!("{}", e));
-                                }
-                                _ => {}
-                            }
-                            assert!(infix_expression.right.is_some());
-                            match test_integer_literal(
-                                infix_expression.right.unwrap(),
-                                *right_value,
-                            ) {
-                                Err(e) => {
-                                    assert!(false, format!("{}", e));
-                                }
-                                _ => {}
+                    match test_infix_expression(
+                        Box::from(expression),
+                        String::from(*operator),
+                        (*left_value).clone(), (*right_value).clone()) {
+                            Ok(()) => {},
+                            Err(e) => {
+                                assert!(false, "{}", e);
                             }
                         }
-                        _ => {
-                            assert!(false, "expected infix expression");
-                        }
-                    }
                 }
                 _ => {
                     assert!(false, "expected expression statement");
@@ -555,6 +528,7 @@ mod tests {
             }
         }
     }
+
     #[test]
     fn precedence_parsing() {
         let tests: Vec<(&str, &str)> = vec![
@@ -580,6 +554,7 @@ mod tests {
         }
     }
 
+    #[derive(Debug, Clone)]
     enum ExpressionExpectation {
         Integer(i64),
         Identifier(String),
