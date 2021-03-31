@@ -35,7 +35,6 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_prefix(&mut self, token_type: TokenType) -> Option<Expression> {
-        defer!(println!("parse prefix"));
         match token_type {
             TokenType::IDENT => {
                 let identifier = self.parse_identifier();
@@ -45,6 +44,7 @@ impl<'a> Parser<'a> {
                 let prefix_expression = self.parse_prefix_expression();
                 Some(prefix_expression)
             }
+            TokenType::LPAREN => self.parse_grouped_expression(),
             TokenType::INT => {
                 let integer_expression = self.parse_integer();
                 Some(integer_expression)
@@ -85,6 +85,20 @@ impl<'a> Parser<'a> {
             token: token,
             value: value,
         })
+    }
+
+    // FIXME
+    fn parse_grouped_expression(&mut self) -> Option<Expression> {
+        self.next_token();
+
+        let expression = self.parse_expression(Operator::LOWEST);
+        if expression.is_none() {
+            return None;
+        }
+        if !self.peek_token_is(TokenType::RPAREN) {
+            return None;
+        }
+        Some(expression.unwrap())
     }
 
     fn parse_prefix_expression(&mut self) -> Expression {
@@ -655,6 +669,11 @@ mod tests {
             ("false", "false"),
             ("3 > 5 == false", "((3 > 5) == false)"),
             ("3 < 5 == true", "((3 < 5) == true)"),
+            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+            ("(5 + 5) * 2", "((5 + 5) * 2)"),
+            ("2 / (5 + 5)", "(2 / (5 + 5))"),
+            ("-(5 + 5)", "(-(5 + 5))"),
+            ("!(true == true)", "(!(true == true))"),
         ];
         for (input, expected_output) in tests.iter() {
             let mut l = Lexer::new(*input);
