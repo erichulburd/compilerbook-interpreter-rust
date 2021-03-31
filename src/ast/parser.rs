@@ -491,7 +491,12 @@ mod tests {
 
     #[test]
     fn parse_prefix_expression() {
-        let tests: Vec<(&str, &str, i64)> = vec![("!5", "!", 5), ("-5", "-", 5)];
+        let tests: Vec<(&str, &str, ExpressionExpectation)> = vec![
+            ("!5", "!", ExpressionExpectation::Integer(5)),
+            ("-5", "-", ExpressionExpectation::Integer(5)),
+            ("!false", "!", ExpressionExpectation::Bool(false)),
+            ("!true", "!", ExpressionExpectation::Bool(true)),
+        ];
         for (input, operator, value) in tests.iter() {
             let mut l = Lexer::new(*input);
             let mut p = Parser::new(&mut l);
@@ -508,7 +513,8 @@ mod tests {
                         Expression::PrefixExpression(prefix_expression) => {
                             assert_eq!(String::from(*operator), prefix_expression.operator);
                             assert!(prefix_expression.right.is_some());
-                            match test_integer_literal(prefix_expression.right.unwrap(), *value) {
+                            let expression = prefix_expression.right.unwrap();
+                            match test_literal_expression(expression, (*value).clone()) {
                                 Err(e) => {
                                     assert!(false, format!("{}", e));
                                 }
@@ -578,6 +584,24 @@ mod tests {
                 "!=",
                 ExpressionExpectation::Integer(6),
             ),
+            (
+                "true == true",
+                ExpressionExpectation::Bool(true),
+                "==",
+                ExpressionExpectation::Bool(true),
+            ),
+            (
+                "true != false",
+                ExpressionExpectation::Bool(true),
+                "!=",
+                ExpressionExpectation::Bool(false),
+            ),
+            (
+                "false == false",
+                ExpressionExpectation::Bool(false),
+                "==",
+                ExpressionExpectation::Bool(false),
+            ),
         ];
         for (input, left_value, operator, right_value) in tests.iter() {
             let mut l = Lexer::new(*input);
@@ -630,7 +654,7 @@ mod tests {
             ("true", "true"),
             ("false", "false"),
             ("3 > 5 == false", "((3 > 5) == false)"),
-            ("3 < 5 == true", "((3 < 5) == true)")
+            ("3 < 5 == true", "((3 < 5) == true)"),
         ];
         for (input, expected_output) in tests.iter() {
             let mut l = Lexer::new(*input);
@@ -645,6 +669,7 @@ mod tests {
     enum ExpressionExpectation {
         Integer(i64),
         Identifier(String),
+        Bool(bool),
     }
 
     fn test_infix_expression(
@@ -683,6 +708,7 @@ mod tests {
         match expectation {
             ExpressionExpectation::Identifier(value) => test_identifier(expression, value),
             ExpressionExpectation::Integer(value) => test_integer_literal(expression, value),
+            ExpressionExpectation::Bool(value) => test_boolean_expression(expression, value),
         }
     }
 
