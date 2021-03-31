@@ -1,4 +1,5 @@
 mod expression;
+mod boolean_expression;
 pub mod expression_node;
 mod expression_statement;
 pub mod identifier;

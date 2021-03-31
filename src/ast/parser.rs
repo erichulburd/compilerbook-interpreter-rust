@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use scopeguard::guard;
 
 use crate::lexer::Lexer;
-use super::identifier::Identifier;
+use super::{boolean_expression::BooleanExpression, identifier::Identifier};
 use super::operators::get_token_type_operator_precedence;
 use super::program::Program;
 use super::statement::Statement;
@@ -49,6 +49,10 @@ impl<'a> Parser<'a> {
                 let integer_expression = self.parse_integer();
                 Some(integer_expression)
             }
+            TokenType::TRUE | TokenType::FALSE => {
+                let boolean_expression = self.parse_boolean();
+                Some(boolean_expression)
+            }
             _ => None,
         }
     }
@@ -70,6 +74,16 @@ impl<'a> Parser<'a> {
         Expression::IntegerLiteral(IntegerLiteral {
             token: token,
             value: literal,
+        })
+    }
+
+    fn parse_boolean(&self) -> Expression {
+        let token = self.current_token.clone().unwrap();
+        let value = token.token_type == TokenType::TRUE;
+
+        Expression::Boolean(BooleanExpression {
+            token: token,
+            value: value,
         })
     }
 
@@ -452,6 +466,33 @@ mod tests {
     }
 
     #[test]
+    fn integer_boolean_expression() {
+        let tests = vec![("true;", true), ("false;", false)];
+        for (input, value) in tests.iter() {
+            let mut l = Lexer::new(*input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program();
+            assert_eq!(1, program.statements.len());
+            let statement = program.statements[0].clone();
+            match statement {
+                Statement::ExpressionStatement(st) => {
+                    assert_eq!(true, st.value.is_some());
+                    let expression = st.value.unwrap();
+                    match test_boolean_expression(Box::from(expression), *value) {
+                        Ok(()) => {},
+                        Err(e) => assert!(false, "{}", e),
+                    }
+                }
+                _ => {
+                    assert!(false, "expected expression statement");
+                }
+            }
+
+        }
+ }
+
+
+    #[test]
     fn parse_prefix_expression() {
         let tests: Vec<(&str, &str, i64)> = vec![("!5", "!", 5), ("-5", "-", 5)];
         for (input, operator, value) in tests.iter() {
@@ -621,6 +662,27 @@ mod tests {
                 Ok(())
             }
             _ => Err(String::from("expected integeral literal")),
+        }
+    }
+
+    fn test_boolean_expression(expression: Box<Expression>, value: bool) -> Result<(), String> {
+        match *expression {
+            Expression::Boolean(boolean_expression) => {
+                if boolean_expression.value != value {
+                    return Err(format!(
+                        "expected boolean value {} but received {}",
+                        value, boolean_expression.value
+                    ));
+                }
+                if boolean_expression.token_literal() != format!("{}", value) {
+                    return Err(format!(
+                        "expected boolean literal {} but received {}",
+                        value, boolean_expression.value
+                    ));
+                }
+                Ok(())
+            }
+            _ => Err(String::from("expected boolean expression")),
         }
     }
 
