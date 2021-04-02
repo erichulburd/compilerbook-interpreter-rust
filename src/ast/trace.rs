@@ -1,17 +1,18 @@
 use std::{cell::Cell, iter::repeat};
 
-static TRACE_IDENT_PLACEHOLDER: &'static str = "\t";
+static TRACE_IDENT_PLACEHOLDER: &'static str = "  ";
 
+#[derive(Debug)]
 pub struct Tracer {
-    trace_level: usize,
-    pub on: Cell<bool>,
+    pub trace_level: usize,
+    pub on: bool,
 }
 
 impl Tracer {
     pub fn new(on: bool) -> Tracer {
         Tracer {
             trace_level: 0,
-            on: Cell::new(on),
+            on: on,
         }
     }
 
@@ -30,20 +31,22 @@ impl Tracer {
     }
 
     fn trace_print(&self, s: String) {
-        if self.on.get() {
+        if self.on {
             println!("{}{}", self.ident_level(), s)
         }
     }
 
-    pub fn trace(&mut self, msg: String) -> String {
+    pub fn trace<'a>(&mut self, s: &'a str) -> Box<dyn Fn(&mut Tracer) -> &'a str + 'a> {
+        self.trace_print(format!("BEGIN {}", String::from(s)));
         self.inc();
-        self.trace_print(format!("BEGIN {}", msg));
-        msg
+        Box::new(move |tr: &mut Tracer| {
+            tr.untrace(s)
+        })
     }
 
-    pub fn untrace(&mut self, msg: String) -> String {
-        self.trace_print(format!("END {}", msg));
+    pub fn untrace<'a>(&mut self, s: &'a str) -> &'a str {
         self.dec();
-        msg
+        self.trace_print(format!("END {}", s));
+        s
     }
 }

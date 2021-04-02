@@ -1,7 +1,4 @@
-use scopeguard::guard;
-use std::collections::HashMap;
-
-use super::operators::get_token_type_operator_precedence;
+use super::{operators::get_token_type_operator_precedence, trace::Tracer};
 use super::program::Program;
 use super::statement::Statement;
 use super::{boolean_expression::BooleanExpression, identifier::Identifier};
@@ -19,6 +16,7 @@ pub struct Parser<'a> {
     errors: Vec<String>,
     current_token: Option<Token>,
     peek_token: Option<Token>,
+    tracer: Tracer,
 }
 
 impl<'a> Parser<'a> {
@@ -28,6 +26,7 @@ impl<'a> Parser<'a> {
             errors: vec![],
             current_token: None,
             peek_token: None,
+            tracer: Tracer::new(true),
         };
         p.next_token();
         p.next_token();
@@ -35,25 +34,38 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_prefix(&mut self, token_type: TokenType) -> Option<Expression> {
+        let s = format!("parse_prefix, {}", token_type);
+        let untrace = self.tracer.trace(s.as_str());
+
         match token_type {
             TokenType::IDENT => {
                 let identifier = self.parse_identifier();
+                untrace(&mut self.tracer);
                 Some(identifier)
             }
             TokenType::BANG | TokenType::MINUS => {
                 let prefix_expression = self.parse_prefix_expression();
+                untrace(&mut self.tracer);
                 Some(prefix_expression)
             }
-            TokenType::LPAREN => self.parse_grouped_expression(),
+            TokenType::LPAREN => {
+                untrace(&mut self.tracer);
+                self.parse_grouped_expression()
+            },
             TokenType::INT => {
                 let integer_expression = self.parse_integer();
+                untrace(&mut self.tracer);
                 Some(integer_expression)
             }
             TokenType::TRUE | TokenType::FALSE => {
                 let boolean_expression = self.parse_boolean();
+                untrace(&mut self.tracer);
                 Some(boolean_expression)
             }
-            _ => None,
+            _ => {
+                untrace(&mut self.tracer);
+                None
+            },
         }
     }
 
@@ -98,6 +110,7 @@ impl<'a> Parser<'a> {
         if !self.peek_token_is(TokenType::RPAREN) {
             return None;
         }
+        self.next_token();
         Some(expression.unwrap())
     }
 
@@ -132,6 +145,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_infix_expression(&mut self, left: Expression) -> InfixExpression {
+        let s = format!("parse_infix_expression {}", self.current_token.clone().unwrap().token_type);
+        let untrace = self.tracer.trace(s.as_str());
         let token = self.current_token.clone().unwrap();
         let operator = token.clone().literal;
         let precedence = self.current_precedence();
@@ -148,7 +163,7 @@ impl<'a> Parser<'a> {
                 None
             },
         };
-
+        untrace(&mut self.tracer);
         infix_expression
     }
 
@@ -263,16 +278,23 @@ impl<'a> Parser<'a> {
         Some(stmt)
     }
 
+
     fn parse_expression(&mut self, operator: Operator) -> Option<Expression> {
+        let s = format!("parse_expression, {}", operator);
+        let untrace = self.tracer.trace(s.as_str());
+
         if self.current_token.is_none() {
+            untrace(&mut self.tracer);
             return None;
         }
-        let prefix = self.parse_prefix(self.current_token.clone().unwrap().token_type);
+        let prefix = self.parse_prefix(
+            self.current_token.clone().unwrap().token_type);
         if prefix.is_none() {
             self.errors.push(format!(
                 "no prefix parse function for {}",
                 self.current_token.clone().unwrap().token_type
             ));
+            untrace(&mut self.tracer);
             return None;
         }
         let mut left = prefix.unwrap();
@@ -280,11 +302,13 @@ impl<'a> Parser<'a> {
             let is_infix_token =
                 self.is_infix_token(self.peek_token.clone().unwrap().token_type, left.clone());
             if !is_infix_token {
+                untrace(&mut self.tracer);
                 return Some(left);
             }
             self.next_token();
             left = Expression::InfixExpression(self.parse_infix_expression(left));
         }
+        untrace(&mut self.tracer);
         Some(left)
     }
 
