@@ -1,4 +1,6 @@
-use super::{operators::get_token_type_operator_precedence, trace::Tracer};
+use std::os::macos::raw::stat;
+
+use super::{block_statement::BlockStatement, if_expression::IfExpression, operators::get_token_type_operator_precedence, trace::Tracer};
 use super::program::Program;
 use super::statement::Statement;
 use super::{boolean_expression::BooleanExpression, identifier::Identifier};
@@ -47,7 +49,11 @@ impl<'a> Parser<'a> {
                 let prefix_expression = self.parse_prefix_expression();
                 untrace(&mut self.tracer);
                 Some(prefix_expression)
-            }
+            },
+            TokenType::IF => {
+                untrace(&mut self.tracer);
+                self.parse_if_expression()
+            },
             TokenType::LPAREN => {
                 untrace(&mut self.tracer);
                 self.parse_grouped_expression()
@@ -99,7 +105,6 @@ impl<'a> Parser<'a> {
         })
     }
 
-    // FIXME
     fn parse_grouped_expression(&mut self) -> Option<Expression> {
         self.next_token();
 
@@ -142,6 +147,93 @@ impl<'a> Parser<'a> {
             | TokenType::LT => true,
             _ => false,
         }
+    }
+
+    fn parse_if_expression(&mut self) -> Option<Expression> {
+        let s = format!("parse_if_expression");
+        let untrace = self.tracer.trace(s.as_str());
+
+        if !self.expect_peek(TokenType::LPAREN) {
+            self.next_token();
+            untrace(&mut self.tracer);
+            return None;
+        }
+        self.next_token();
+        let condition = self.parse_expression(Operator::LOWEST);
+        if condition.is_none() {
+            self.next_token();
+            untrace(&mut self.tracer);
+            return None;
+        }
+        if !self.expect_peek(TokenType::RPAREN) {
+            self.next_token();
+            untrace(&mut self.tracer);
+            return None;
+        }
+        if !self.expect_peek(TokenType::LBRACE) {
+            self.next_token();
+            untrace(&mut self.tracer);
+            return None;
+        }
+        let consequence = self.parse_block_statement();
+        if consequence.is_none() {
+            self.next_token();
+            untrace(&mut self.tracer);
+            return None;
+        }
+
+        let mut alternative = None;
+        if self.peek_token_is(TokenType::ELSE) {
+            self.next_token();
+
+            if !self.expect_peek(TokenType::LBRACE) {
+                untrace(&mut self.tracer);
+                return None;
+            }
+
+            let alternative_block = self.parse_block_statement();
+            if alternative_block.is_some() {
+                alternative = Some(Box::new(alternative_block.unwrap()));
+            }
+        }
+
+        let expression = IfExpression{
+            token: self.current_token.clone().unwrap(),
+            condition: Box::new(condition.unwrap()),
+            consequence: Box::new(consequence.unwrap()),
+            alternative: alternative,
+        };
+
+        untrace(&mut self.tracer);
+        Some(Expression::IfExpression(expression))
+    }
+
+    fn parse_block_statement(&mut self) -> Option<BlockStatement> {
+        let s = format!("parse_block_expression");
+        let untrace = self.tracer.trace(s.as_str());
+
+        if self.current_token.is_none() {
+            untrace(&mut self.tracer);
+            return None;
+        }
+        let mut statements: Vec<Statement> = vec![];
+        let token = self.current_token.clone();
+        println!("> tt {}", self.current_token.clone().unwrap().token_type);
+        self.next_token();
+        while !self.current_token_is(TokenType::RBRACE) {
+            let statement = self.parse_statement();
+            if statement.is_some() {
+                statements.push(statement.unwrap());
+            }
+        }
+        self.next_token();
+
+        let block_statement = BlockStatement{
+          token: token.unwrap(),
+          statements: statements,
+        };
+        untrace(&mut self.tracer);
+        Some(block_statement)
     }
 
     fn parse_infix_expression(&mut self, left: Expression) -> InfixExpression {
@@ -326,10 +418,12 @@ impl<'a> Parser<'a> {
             value: expression,
         };
         self.next_token();
-        if !self.current_token_is(TokenType::SEMICOLON) {
+        if !self.current_token_is(TokenType::RBRACE) {
+            if !self.current_token_is(TokenType::SEMICOLON) {
+                self.next_token();
+            }
             self.next_token();
         }
-        self.next_token();
         Some(expression_statement)
     }
 
@@ -394,6 +488,7 @@ mod tests {
     use super::Parser;
     use super::Program;
     use super::Statement;
+    use super::ExpressionStatement;
 
     #[test]
     fn let_statements() {
@@ -498,6 +593,81 @@ mod tests {
             }
             _ => {
                 assert!(false, "expected expression statement");
+            }
+        }
+    }
+
+
+    #[test]
+    fn if_expression() {
+        let tests = vec![
+            (
+                "if (x < y) { x }",
+                (
+                    "<",
+                    ExpressionExpectation::Identifier(String::from("x")),
+                    ExpressionExpectation::Identifier(String::from("y")),
+                ),
+                "x",
+            ),
+        ];
+        for (input, (operator, left, right), return_identifier) in tests.iter() {
+            let mut l = Lexer::new(*input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program();
+            assert_eq!(0, p.errors.len());
+            assert_eq!(1, program.statements.len());
+            let statement = program.statements[0].clone();
+            let mut expression: Option<Expression> = None;
+            match statement {
+                Statement::ExpressionStatement(st) => {
+                    assert_eq!(true, st.value.is_some());
+                    expression = st.value;
+                }
+                _ => {
+                    assert!(false, "expected expression statement");
+                }
+            }
+
+            assert!(expression.is_some());
+            let maybe_if_expression = match expression.unwrap() {
+                Expression::IfExpression(exp) => Some(exp),
+                _ => None,
+            };
+
+            assert!(maybe_if_expression.is_some(), "expected if expression");
+            let if_expression = maybe_if_expression.unwrap();
+
+            let err = match test_infix_expression(
+                if_expression.condition,
+                String::from(*operator),
+                (*left).clone(),
+                (*right).clone(),
+            ) {
+                Ok(()) => None,
+                Err(e) => Some(e),
+            };
+            assert!(err.is_none(), err.unwrap());
+
+            assert_eq!(1, if_expression.consequence.statements.len());
+            assert!(if_expression.alternative.is_none());
+
+            let consequence_statement = match if_expression.consequence.statements[0].clone() {
+                Statement::ExpressionStatement(expression_statement) => {
+                    Some(expression_statement)
+                },
+                _ => None,
+            };
+            assert!(consequence_statement.is_some());
+            assert!(consequence_statement.clone().unwrap().value.is_some());
+
+            let consequence_identifier = consequence_statement.clone().unwrap().value;
+            assert!(consequence_identifier.is_some());
+            match test_identifier(
+                Box::from(consequence_identifier.unwrap()),
+                String::from(*return_identifier)) {
+                    Ok(()) => {},
+                    Err(e) => assert!(false, e),
             }
         }
     }
