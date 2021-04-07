@@ -1,10 +1,9 @@
-use std::os::macos::raw::stat;
-
-use super::{block_statement::BlockStatement, if_expression::IfExpression, operators::get_token_type_operator_precedence, trace::Tracer};
-use super::program::Program;
-use super::statement::Statement;
-use super::{boolean_expression::BooleanExpression, identifier::Identifier};
-use super::{
+use crate::ast::{block_statement::BlockStatement, if_expression::IfExpression, operators::get_token_type_operator_precedence, trace::Tracer};
+use crate::ast::program::Program;
+use crate::ast::statement::Statement;
+use crate::ast::fn_literal::FnLiteral;
+use crate::ast::{boolean_expression::BooleanExpression, identifier::Identifier};
+use crate::ast::{
     expression::Expression, expression_statement::ExpressionStatement,
     infix_expression::InfixExpression, integer_literal::IntegerLiteral,
     let_statement::LetStatement, operators::Operator, prefix_expression::PrefixExpression,
@@ -62,7 +61,12 @@ impl<'a> Parser<'a> {
                 let integer_expression = self.parse_integer();
                 untrace(&mut self.tracer);
                 Some(integer_expression)
-            }
+            },
+            TokenType::FUNCTION => {
+                let fn_expression = self.parse_fn_literal();
+                untrace(&mut self.tracer);
+                fn_expression
+            },
             TokenType::TRUE | TokenType::FALSE => {
                 let boolean_expression = self.parse_boolean();
                 untrace(&mut self.tracer);
@@ -149,9 +153,115 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn expect_current(&mut self, tt: TokenType) -> bool {
+      if self.current_token.is_none() {
+        self.errors.push(format!("expected current token {}, found none", tt));
+        return false;
+      }
+      let current_token_type = self.current_token.clone().unwrap().token_type;
+      if current_token_type != tt {
+        self.errors.push(
+          format!(
+            "expected current token {}, found {}",
+            tt,
+          current_token_type));
+        return false;
+      }
+      return true;
+    }
+
+    fn parse_fn_parameters(&mut self) -> Result<Vec<Identifier>, String> {
+        let mut parameters: Vec<Identifier> = vec![];
+
+        if !self.current_token_is(TokenType::LPAREN) {
+          return Err(
+            format!(
+              "expected LPAREN, found {}",
+              self.current_token.clone().unwrap().token_type));
+        }
+
+        if self.peek_token_is(TokenType::RPAREN) {
+            self.next_token();
+            return Ok(parameters);
+        }
+        self.next_token();
+
+        let identifier = Identifier{
+            token: self.current_token.clone().unwrap(),
+            value: self.current_token.clone().unwrap().literal,
+        };
+        parameters.push(identifier.clone());
+
+        while self.peek_token_is(TokenType::COMMA) {
+            self.next_token();
+            self.next_token();
+
+            let identifier = Identifier{
+                token: self.current_token.clone().unwrap(),
+                value: self.current_token.clone().unwrap().literal,
+            };
+            parameters.push(identifier);
+        }
+        self.next_token();
+
+        if !self.current_token_is(TokenType::RPAREN) {
+            return Err(format!("expected RPAREN, found {}", self.current_token.clone().unwrap().token_type));
+        }
+
+        Ok(parameters)
+    }
+
+    fn parse_fn_literal(&mut self) -> Option<Expression> {
+        let s = format!(
+          "parse_fn_literal {}",
+          self.current_token.clone().unwrap().token_type);
+        let untrace = self.tracer.trace(s.as_str());
+
+        if !self.current_token_is(TokenType::FUNCTION) {
+          panic!(
+              "expected FUNCTION, found {}",
+              self.current_token.clone().unwrap().token_type);
+        }
+
+        let fn_token = self.current_token.clone().unwrap();
+        let peek_token = self.peek_token.clone().unwrap();
+        if !self.peek_token_is(TokenType::LPAREN) {
+            panic!(
+                "expected LPAREN, found {}",
+                self.peek_token.clone().unwrap().token_type);
+        }
+        self.next_token();
+
+        let parameters_result = self.parse_fn_parameters();
+        match parameters_result {
+            Err(err) => panic!(err),
+            _ => {},
+        }
+        let parameters = parameters_result.unwrap();
+
+        if !self.expect_peek(TokenType::LBRACE) {
+            self.next_token();
+            untrace(&mut self.tracer);
+            return None;
+        }
+
+        let body = self.parse_block_statement();
+
+        let expression = FnLiteral{
+            token: fn_token,
+            parameters: parameters,
+            body: body,
+        };
+
+        untrace(&mut self.tracer);
+        Some(Expression::FnLiteral(expression))
+    }
+
     fn parse_if_expression(&mut self) -> Option<Expression> {
         let s = format!("parse_if_expression");
         let untrace = self.tracer.trace(s.as_str());
+
+        let if_token = self.current_token.clone().unwrap();
 
         if !self.expect_peek(TokenType::LPAREN) {
             self.next_token();
@@ -198,7 +308,7 @@ impl<'a> Parser<'a> {
         }
 
         let expression = IfExpression{
-            token: self.current_token.clone().unwrap(),
+            token: if_token,
             condition: Box::new(condition.unwrap()),
             consequence: Box::new(consequence.unwrap()),
             alternative: alternative,
@@ -218,7 +328,6 @@ impl<'a> Parser<'a> {
         }
         let mut statements: Vec<Statement> = vec![];
         let token = self.current_token.clone();
-        println!("> tt {}", self.current_token.clone().unwrap().token_type);
         self.next_token();
         while !self.current_token_is(TokenType::RBRACE) {
             let statement = self.parse_statement();
@@ -480,8 +589,8 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::expression::Expression;
-    use super::super::token_node::TokenNode;
+    use crate::ast::expression::Expression;
+    use crate::ast::token_node::TokenNode;
     use crate::lexer::Lexer;
     use crate::token::TokenType;
 
@@ -717,14 +826,13 @@ mod tests {
                 Statement::ExpressionStatement(expression_statement) => {
                     let expression = expression_statement.value.clone().unwrap();
                     match expression {
-                        // Expression::Identifier(prefix_expression) => {
                         Expression::PrefixExpression(prefix_expression) => {
                             assert_eq!(String::from(*operator), prefix_expression.operator);
                             assert!(prefix_expression.right.is_some());
                             let expression = prefix_expression.right.unwrap();
                             match test_literal_expression(expression, (*value).clone()) {
                                 Err(e) => {
-                                    assert!(false, format!("{}", e));
+                                    assert!(false, "{}", e);
                                 }
                                 _ => {}
                             }
@@ -877,6 +985,117 @@ mod tests {
             assert_eq!(*expected_output, program.string().as_str());
         }
     }
+
+    #[test]
+    fn fn_literal_parsing() {
+        let input = "fn(x, y) { x + y; }";
+        let mut l = Lexer::new(input);
+        let mut p = Parser::new(&mut l);
+        let program = p.parse_program();
+        assert_eq!(0, p.errors.len(), "{}", p.errors.join(", "));
+
+        assert_eq!(1, program.statements.len());
+
+        let expression_statement = match program.statements[0].clone() {
+            Statement::ExpressionStatement(stmt) => Some(stmt),
+            _ => None,
+        };
+        assert!(expression_statement.is_some());
+
+        let expression = expression_statement.clone().unwrap().value;
+        assert!(expression.is_some());
+
+        let fn_literal = match expression.unwrap() {
+          Expression::FnLiteral(fn_literal) => Some(fn_literal),
+          _ => None,
+        };
+        assert!(fn_literal.is_some());
+
+        assert_eq!(2, fn_literal.clone().unwrap().parameters.len());
+
+        let parameters = fn_literal.clone().unwrap().parameters;
+
+        let mut err = match test_literal_expression(
+          Box::new(Expression::Identifier(parameters[0].clone())),
+          ExpressionExpectation::Identifier(String::from("x"))) {
+            Ok(()) => None,
+            Err(e) => Some(e),
+          };
+        assert!(err.is_none());
+
+        err = match test_literal_expression(
+          Box::new(Expression::Identifier(parameters[1].clone())),
+          ExpressionExpectation::Identifier(String::from("y"))) {
+            Ok(()) => None,
+            Err(e) => Some(e),
+          };
+        assert!(err.is_none());
+
+        assert!(fn_literal.clone().unwrap().body.is_some());
+        assert_eq!(1, fn_literal.clone().unwrap().body.unwrap().statements.len());
+
+        let body_statement = match fn_literal.unwrap().body.unwrap().statements[0].clone() {
+          Statement::ExpressionStatement(exp_stmnt) => Some(exp_stmnt),
+          _ => None,
+        };
+        assert!(body_statement.is_some());
+
+        let body_expression = body_statement.unwrap().value;
+        assert!(body_expression.is_some());
+
+        err = match test_infix_expression(
+          Box::from(body_expression.clone().unwrap()),
+          String::from("+"),
+          ExpressionExpectation::Identifier(String::from("x")),
+          ExpressionExpectation::Identifier(String::from("y"))) {
+            Ok(()) => None,
+            Err(e) => Some(e),
+          };
+        assert!(err.is_none());
+    }
+
+    #[test]
+    fn parameter_parsing() {
+        let tests = vec![
+            ("fn() {};", vec![]),
+            ("fn(x) {};", vec!["x"]),
+            ("fn(x, y, z) {};", vec!["x", "y", "z"]),
+        ];
+        for (input, expected_parameters) in tests.iter() {
+            let mut l = Lexer::new(*input);
+            let mut p = Parser::new(&mut l);
+            let program = p.parse_program();
+            assert_eq!(0, p.errors.len(), "{}", p.errors.join("; "));
+            assert_eq!(1, program.statements.len());
+
+            let statement = match program.statements[0].clone() {
+                Statement::ExpressionStatement(stmt) => Some(stmt),
+                _ => None,
+            };
+            assert!(statement.is_some(), "expected expression statement");
+            assert!(statement.clone().unwrap().value.is_some());
+
+            let fn_literal = match statement.clone().unwrap().value.unwrap() {
+                Expression::FnLiteral(fn_literal) => Some(fn_literal),
+                _ => None,
+            };
+
+            assert!(fn_literal.is_some(), "expected Expression::FnLiteral");
+            assert_eq!((*expected_parameters).len(), fn_literal.clone().unwrap().parameters.len());
+
+            for (i, param) in (*expected_parameters).iter().enumerate() {
+                let identifier = Expression::Identifier(
+                    fn_literal.clone().unwrap().parameters[i].clone());
+                match test_identifier(
+                    Box::new(identifier),
+                    String::from(*param)) {
+                    Ok(()) => {},
+                    Err(e) => panic!("identifier did not match {}", e),
+                }
+            }
+        }
+    }
+
 
     #[derive(Debug, Clone)]
     enum ExpressionExpectation {
