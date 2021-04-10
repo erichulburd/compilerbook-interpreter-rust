@@ -1,8 +1,25 @@
 use crate::lexer::Lexer;
+use crate::parser::parser::Parser;
+use crate::ast::program::Program;
+use crate::ast::token_node::TokenNode;
 use std::io::{self, Write};
 use users::{get_current_uid, get_user_by_uid};
 
 const PROMPT: &[u8] = b">> ";
+
+const MONKEY_FACE: &'static str = r#"
+            __,__
+   .--.  .-"     "-.  .--.\
+  / .. \/  .-. .-.  \/ .. \
+ | |  '|  /   Y   \  |'  | |
+ | \   \  \ 0 | 0 /  /   / |
+  \ '- ,\.-"""""""-./, -' /
+   ''-' /_   ^ ^   _\ '-''
+       |  \._   _./  |
+       \   \ '~' /   /
+        '._ '-=-' _.'
+           '-----'
+"#;
 
 pub fn start() {
     let stdout = io::stdout();
@@ -29,10 +46,16 @@ pub fn start() {
                     return;
                 }
                 let mut l = Lexer::new(input.as_str());
-                let tokens = l.read_tokens();
-                for tok in tokens {
-                    println!("{}", tok);
+                let mut p = Parser::new(&mut l);
+                let program: Program = p.parse_program();
+                if p.errors.len() != 0 {
+                    println!("{}", MONKEY_FACE);
+                    for err in p.errors.iter() {
+                        println!("\t{}\n", err);
+                    }
+                    return;
                 }
+                println!("{}\n", program.string());
             }
             Err(error) => {
                 println!("Fatal: {}", error);
