@@ -20,7 +20,11 @@ impl TokenNode for IfExpression {
     }
 
     fn string(&self) -> String {
-        let mut s = format!("if {} {}", self.condition.string(), self.consequence.string());
+        let mut s = format!(
+            "if {} {}",
+            self.condition.string(),
+            self.consequence.string()
+        );
 
         if self.alternative.is_some() {
             let alternative = self.alternative.clone().unwrap().string();

@@ -58,6 +58,7 @@ pub fn get_token_type_operator_precedence(token_type: TokenType) -> Operator {
         TokenType::MINUS => Operator::SUM,
         TokenType::SLASH => Operator::PRODUCT,
         TokenType::ASTERISK => Operator::PRODUCT,
+        TokenType::LPAREN => Operator::CALL,
         _ => Operator::LOWEST,
     }
 }

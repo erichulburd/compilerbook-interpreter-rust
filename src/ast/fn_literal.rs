@@ -1,5 +1,5 @@
-use super::{block_statement::BlockStatement, token_node::TokenNode};
 use super::identifier::Identifier;
+use super::{block_statement::BlockStatement, token_node::TokenNode};
 use crate::token::{Token, TokenType};
 
 #[derive(Debug, Clone)]
@@ -22,12 +22,12 @@ impl TokenNode for FnLiteral {
         let mut s = format!("{} (", self.token_literal());
         let mut params: Vec<String> = vec![];
         for parameter in self.parameters.iter() {
-          params.push(parameter.string());
+            params.push(parameter.string());
         }
         s.push_str(params.join(", ").as_str());
         s.push_str(") ");
         if self.body.is_some() {
-          s.push_str(self.body.clone().unwrap().string().as_str());
+            s.push_str(self.body.clone().unwrap().string().as_str());
         }
         s
     }

@@ -1,7 +1,10 @@
-use crate::ast::{block_statement::BlockStatement, if_expression::IfExpression, operators::get_token_type_operator_precedence, trace::Tracer};
+use crate::ast::fn_literal::FnLiteral;
 use crate::ast::program::Program;
 use crate::ast::statement::Statement;
-use crate::ast::fn_literal::FnLiteral;
+use crate::ast::{
+    block_statement::BlockStatement, if_expression::IfExpression,
+    operators::get_token_type_operator_precedence, trace::Tracer,
+};
 use crate::ast::{boolean_expression::BooleanExpression, identifier::Identifier};
 use crate::ast::{
     expression::Expression, expression_statement::ExpressionStatement,
@@ -14,8 +17,8 @@ use crate::token::{Token, TokenType};
 
 pub struct Parser<'a> {
     l: &'a mut Lexer<'a>,
-    errors: Vec<String>,
-    current_token: Option<Token>,
+    pub errors: Vec<String>,
+    pub current_token: Option<Token>,
     peek_token: Option<Token>,
     tracer: Tracer,
 }
@@ -48,25 +51,25 @@ impl<'a> Parser<'a> {
                 let prefix_expression = self.parse_prefix_expression();
                 untrace(&mut self.tracer);
                 Some(prefix_expression)
-            },
+            }
             TokenType::IF => {
                 untrace(&mut self.tracer);
                 self.parse_if_expression()
-            },
+            }
             TokenType::LPAREN => {
                 untrace(&mut self.tracer);
                 self.parse_grouped_expression()
-            },
+            }
             TokenType::INT => {
                 let integer_expression = self.parse_integer();
                 untrace(&mut self.tracer);
                 Some(integer_expression)
-            },
+            }
             TokenType::FUNCTION => {
                 let fn_expression = self.parse_fn_literal();
                 untrace(&mut self.tracer);
                 fn_expression
-            },
+            }
             TokenType::TRUE | TokenType::FALSE => {
                 let boolean_expression = self.parse_boolean();
                 untrace(&mut self.tracer);
@@ -75,7 +78,7 @@ impl<'a> Parser<'a> {
             _ => {
                 untrace(&mut self.tracer);
                 None
-            },
+            }
         }
     }
 
@@ -139,7 +142,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn is_infix_token(&mut self, token_type: TokenType, left: Expression) -> bool {
+    fn is_infix_token(&mut self, token_type: TokenType) -> bool {
         match token_type {
             TokenType::PLUS
             | TokenType::MINUS
@@ -154,30 +157,30 @@ impl<'a> Parser<'a> {
     }
 
     fn expect_current(&mut self, tt: TokenType) -> bool {
-      if self.current_token.is_none() {
-        self.errors.push(format!("expected current token {}, found none", tt));
-        return false;
-      }
-      let current_token_type = self.current_token.clone().unwrap().token_type;
-      if current_token_type != tt {
-        self.errors.push(
-          format!(
-            "expected current token {}, found {}",
-            tt,
-          current_token_type));
-        return false;
-      }
-      return true;
+        if self.current_token.is_none() {
+            self.errors
+                .push(format!("expected current token {}, found none", tt));
+            return false;
+        }
+        let current_token_type = self.current_token.clone().unwrap().token_type;
+        if current_token_type != tt {
+            self.errors.push(format!(
+                "expected current token {}, found {}",
+                tt, current_token_type
+            ));
+            return false;
+        }
+        return true;
     }
 
     fn parse_fn_parameters(&mut self) -> Result<Vec<Identifier>, String> {
         let mut parameters: Vec<Identifier> = vec![];
 
         if !self.current_token_is(TokenType::LPAREN) {
-          return Err(
-            format!(
-              "expected LPAREN, found {}",
-              self.current_token.clone().unwrap().token_type));
+            return Err(format!(
+                "expected LPAREN, found {}",
+                self.current_token.clone().unwrap().token_type
+            ));
         }
 
         if self.peek_token_is(TokenType::RPAREN) {
@@ -186,7 +189,7 @@ impl<'a> Parser<'a> {
         }
         self.next_token();
 
-        let identifier = Identifier{
+        let identifier = Identifier {
             token: self.current_token.clone().unwrap(),
             value: self.current_token.clone().unwrap().literal,
         };
@@ -196,7 +199,7 @@ impl<'a> Parser<'a> {
             self.next_token();
             self.next_token();
 
-            let identifier = Identifier{
+            let identifier = Identifier {
                 token: self.current_token.clone().unwrap(),
                 value: self.current_token.clone().unwrap().literal,
             };
@@ -205,7 +208,10 @@ impl<'a> Parser<'a> {
         self.next_token();
 
         if !self.current_token_is(TokenType::RPAREN) {
-            return Err(format!("expected RPAREN, found {}", self.current_token.clone().unwrap().token_type));
+            return Err(format!(
+                "expected RPAREN, found {}",
+                self.current_token.clone().unwrap().token_type
+            ));
         }
 
         Ok(parameters)
@@ -213,14 +219,16 @@ impl<'a> Parser<'a> {
 
     fn parse_fn_literal(&mut self) -> Option<Expression> {
         let s = format!(
-          "parse_fn_literal {}",
-          self.current_token.clone().unwrap().token_type);
+            "parse_fn_literal {}",
+            self.current_token.clone().unwrap().token_type
+        );
         let untrace = self.tracer.trace(s.as_str());
 
         if !self.current_token_is(TokenType::FUNCTION) {
-          panic!(
-              "expected FUNCTION, found {}",
-              self.current_token.clone().unwrap().token_type);
+            panic!(
+                "expected FUNCTION, found {}",
+                self.current_token.clone().unwrap().token_type
+            );
         }
 
         let fn_token = self.current_token.clone().unwrap();
@@ -228,14 +236,15 @@ impl<'a> Parser<'a> {
         if !self.peek_token_is(TokenType::LPAREN) {
             panic!(
                 "expected LPAREN, found {}",
-                self.peek_token.clone().unwrap().token_type);
+                self.peek_token.clone().unwrap().token_type
+            );
         }
         self.next_token();
 
         let parameters_result = self.parse_fn_parameters();
         match parameters_result {
             Err(err) => panic!(err),
-            _ => {},
+            _ => {}
         }
         let parameters = parameters_result.unwrap();
 
@@ -247,7 +256,7 @@ impl<'a> Parser<'a> {
 
         let body = self.parse_block_statement();
 
-        let expression = FnLiteral{
+        let expression = FnLiteral {
             token: fn_token,
             parameters: parameters,
             body: body,
@@ -307,7 +316,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        let expression = IfExpression{
+        let expression = IfExpression {
             token: if_token,
             condition: Box::new(condition.unwrap()),
             consequence: Box::new(consequence.unwrap()),
@@ -337,16 +346,19 @@ impl<'a> Parser<'a> {
         }
         self.next_token();
 
-        let block_statement = BlockStatement{
-          token: token.unwrap(),
-          statements: statements,
+        let block_statement = BlockStatement {
+            token: token.unwrap(),
+            statements: statements,
         };
         untrace(&mut self.tracer);
         Some(block_statement)
     }
 
     fn parse_infix_expression(&mut self, left: Expression) -> InfixExpression {
-        let s = format!("parse_infix_expression {}", self.current_token.clone().unwrap().token_type);
+        let s = format!(
+            "parse_infix_expression {}",
+            self.current_token.clone().unwrap().token_type
+        );
         let untrace = self.tracer.trace(s.as_str());
         let token = self.current_token.clone().unwrap();
         let operator = token.clone().literal;
@@ -368,19 +380,19 @@ impl<'a> Parser<'a> {
         infix_expression
     }
 
-    fn next_token(&mut self) {
+    pub fn next_token(&mut self) {
         self.current_token = self.peek_token.clone();
         self.peek_token = Some(self.l.next_token());
     }
 
-    fn peek_token_is(&self, tt: TokenType) -> bool {
+    pub fn peek_token_is(&self, tt: TokenType) -> bool {
         if self.peek_token.is_none() {
             return false;
         }
         tt == self.peek_token.clone().unwrap().token_type
     }
 
-    fn expect_peek(&mut self, tt: TokenType) -> bool {
+    pub fn expect_peek(&mut self, tt: TokenType) -> bool {
         if self.peek_token_is(tt) {
             self.next_token();
             true
@@ -400,18 +412,31 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn peek_precedence(&self) -> Operator {
+    pub fn peek_precedence(&self) -> Operator {
         get_token_type_operator_precedence(self.peek_token.clone().unwrap().token_type)
     }
 
-    fn current_token_is(&self, tt: TokenType) -> bool {
+    pub fn current_token_is(&self, tt: TokenType) -> bool {
         if self.current_token.is_none() {
             return false;
         }
         tt == self.current_token.clone().unwrap().token_type
     }
 
-    fn current_precedence(&self) -> Operator {
+    pub fn assert_current_token_type(&self, tt: TokenType) {
+        if self.current_token.is_none() {
+            panic!("expected current token {}, but none found", tt);
+        }
+        if !self.current_token_is(tt) {
+            panic!(
+                "expected current token {}, but found {}",
+                tt,
+                self.current_token.clone().unwrap().token_type
+            );
+        }
+    }
+
+    pub fn current_precedence(&self) -> Operator {
         get_token_type_operator_precedence(self.current_token.clone().unwrap().token_type)
     }
 
@@ -479,8 +504,7 @@ impl<'a> Parser<'a> {
         Some(stmt)
     }
 
-
-    fn parse_expression(&mut self, operator: Operator) -> Option<Expression> {
+    pub fn parse_expression(&mut self, operator: Operator) -> Option<Expression> {
         let s = format!("parse_expression, {}", operator);
         let untrace = self.tracer.trace(s.as_str());
 
@@ -488,8 +512,7 @@ impl<'a> Parser<'a> {
             untrace(&mut self.tracer);
             return None;
         }
-        let prefix = self.parse_prefix(
-            self.current_token.clone().unwrap().token_type);
+        let prefix = self.parse_prefix(self.current_token.clone().unwrap().token_type);
         if prefix.is_none() {
             self.errors.push(format!(
                 "no prefix parse function for {}",
@@ -500,14 +523,17 @@ impl<'a> Parser<'a> {
         }
         let mut left = prefix.unwrap();
         while !self.peek_token_is(TokenType::SEMICOLON) && operator < self.peek_precedence() {
-            let is_infix_token =
-                self.is_infix_token(self.peek_token.clone().unwrap().token_type, left.clone());
-            if !is_infix_token {
+            let is_infix_token = self.is_infix_token(self.peek_token.clone().unwrap().token_type);
+            if is_infix_token {
+                self.next_token();
+                left = Expression::InfixExpression(self.parse_infix_expression(left));
+            } else if self.peek_token_is(TokenType::LPAREN) {
+                left = self.parse_call_expression(left);
+
+            } else {
                 untrace(&mut self.tracer);
                 return Some(left);
             }
-            self.next_token();
-            left = Expression::InfixExpression(self.parse_infix_expression(left));
         }
         untrace(&mut self.tracer);
         Some(left)
@@ -588,7 +614,7 @@ impl<'a> Parser<'a> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::ast::expression::Expression;
     use crate::ast::token_node::TokenNode;
     use crate::lexer::Lexer;
@@ -597,7 +623,6 @@ mod tests {
     use super::Parser;
     use super::Program;
     use super::Statement;
-    use super::ExpressionStatement;
 
     #[test]
     fn let_statements() {
@@ -706,20 +731,17 @@ mod tests {
         }
     }
 
-
     #[test]
     fn if_expression() {
-        let tests = vec![
+        let tests = vec![(
+            "if (x < y) { x }",
             (
-                "if (x < y) { x }",
-                (
-                    "<",
-                    ExpressionExpectation::Identifier(String::from("x")),
-                    ExpressionExpectation::Identifier(String::from("y")),
-                ),
-                "x",
+                "<",
+                ExpressionExpectation::Identifier(String::from("x")),
+                ExpressionExpectation::Identifier(String::from("y")),
             ),
-        ];
+            "x",
+        )];
         for (input, (operator, left, right), return_identifier) in tests.iter() {
             let mut l = Lexer::new(*input);
             let mut p = Parser::new(&mut l);
@@ -762,9 +784,7 @@ mod tests {
             assert!(if_expression.alternative.is_none());
 
             let consequence_statement = match if_expression.consequence.statements[0].clone() {
-                Statement::ExpressionStatement(expression_statement) => {
-                    Some(expression_statement)
-                },
+                Statement::ExpressionStatement(expression_statement) => Some(expression_statement),
                 _ => None,
             };
             assert!(consequence_statement.is_some());
@@ -774,9 +794,10 @@ mod tests {
             assert!(consequence_identifier.is_some());
             match test_identifier(
                 Box::from(consequence_identifier.unwrap()),
-                String::from(*return_identifier)) {
-                    Ok(()) => {},
-                    Err(e) => assert!(false, e),
+                String::from(*return_identifier),
+            ) {
+                Ok(()) => {}
+                Err(e) => assert!(false, e),
             }
         }
     }
@@ -976,8 +997,19 @@ mod tests {
             ("2 / (5 + 5)", "(2 / (5 + 5))"),
             ("-(5 + 5)", "(-(5 + 5))"),
             ("!(true == true)", "(!(true == true))"),
+            ("add(b * c)", "add((b * c))"),
+            ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
+            (
+                "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+                "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+            ),
+            (
+                "add(a + b + c * d / f + g)",
+                "add((((a + b) + ((c * d) / f)) + g))",
+            ),
         ];
         for (input, expected_output) in tests.iter() {
+            println!("INPUT {}", *input);
             let mut l = Lexer::new(*input);
             let mut p = Parser::new(&mut l);
             let program = p.parse_program();
@@ -1006,8 +1038,8 @@ mod tests {
         assert!(expression.is_some());
 
         let fn_literal = match expression.unwrap() {
-          Expression::FnLiteral(fn_literal) => Some(fn_literal),
-          _ => None,
+            Expression::FnLiteral(fn_literal) => Some(fn_literal),
+            _ => None,
         };
         assert!(fn_literal.is_some());
 
@@ -1016,27 +1048,32 @@ mod tests {
         let parameters = fn_literal.clone().unwrap().parameters;
 
         let mut err = match test_literal_expression(
-          Box::new(Expression::Identifier(parameters[0].clone())),
-          ExpressionExpectation::Identifier(String::from("x"))) {
+            Box::new(Expression::Identifier(parameters[0].clone())),
+            ExpressionExpectation::Identifier(String::from("x")),
+        ) {
             Ok(()) => None,
             Err(e) => Some(e),
-          };
+        };
         assert!(err.is_none());
 
         err = match test_literal_expression(
-          Box::new(Expression::Identifier(parameters[1].clone())),
-          ExpressionExpectation::Identifier(String::from("y"))) {
+            Box::new(Expression::Identifier(parameters[1].clone())),
+            ExpressionExpectation::Identifier(String::from("y")),
+        ) {
             Ok(()) => None,
             Err(e) => Some(e),
-          };
+        };
         assert!(err.is_none());
 
         assert!(fn_literal.clone().unwrap().body.is_some());
-        assert_eq!(1, fn_literal.clone().unwrap().body.unwrap().statements.len());
+        assert_eq!(
+            1,
+            fn_literal.clone().unwrap().body.unwrap().statements.len()
+        );
 
         let body_statement = match fn_literal.unwrap().body.unwrap().statements[0].clone() {
-          Statement::ExpressionStatement(exp_stmnt) => Some(exp_stmnt),
-          _ => None,
+            Statement::ExpressionStatement(exp_stmnt) => Some(exp_stmnt),
+            _ => None,
         };
         assert!(body_statement.is_some());
 
@@ -1044,13 +1081,14 @@ mod tests {
         assert!(body_expression.is_some());
 
         err = match test_infix_expression(
-          Box::from(body_expression.clone().unwrap()),
-          String::from("+"),
-          ExpressionExpectation::Identifier(String::from("x")),
-          ExpressionExpectation::Identifier(String::from("y"))) {
+            Box::from(body_expression.clone().unwrap()),
+            String::from("+"),
+            ExpressionExpectation::Identifier(String::from("x")),
+            ExpressionExpectation::Identifier(String::from("y")),
+        ) {
             Ok(()) => None,
             Err(e) => Some(e),
-          };
+        };
         assert!(err.is_none());
     }
 
@@ -1081,24 +1119,24 @@ mod tests {
             };
 
             assert!(fn_literal.is_some(), "expected Expression::FnLiteral");
-            assert_eq!((*expected_parameters).len(), fn_literal.clone().unwrap().parameters.len());
+            assert_eq!(
+                (*expected_parameters).len(),
+                fn_literal.clone().unwrap().parameters.len()
+            );
 
             for (i, param) in (*expected_parameters).iter().enumerate() {
-                let identifier = Expression::Identifier(
-                    fn_literal.clone().unwrap().parameters[i].clone());
-                match test_identifier(
-                    Box::new(identifier),
-                    String::from(*param)) {
-                    Ok(()) => {},
+                let identifier =
+                    Expression::Identifier(fn_literal.clone().unwrap().parameters[i].clone());
+                match test_identifier(Box::new(identifier), String::from(*param)) {
+                    Ok(()) => {}
                     Err(e) => panic!("identifier did not match {}", e),
                 }
             }
         }
     }
 
-
     #[derive(Debug, Clone)]
-    enum ExpressionExpectation {
+    pub enum ExpressionExpectation {
         Integer(i64),
         Identifier(String),
         Bool(bool),

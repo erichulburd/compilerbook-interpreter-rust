@@ -1,11 +1,12 @@
 pub mod block_statement;
 pub mod boolean_expression;
+pub mod call_expression;
 pub mod expression;
 pub mod expression_node;
 pub mod expression_statement;
 pub mod fn_literal;
-pub mod if_expression;
 pub mod identifier;
+pub mod if_expression;
 pub mod infix_expression;
 pub mod integer_literal;
 pub mod let_statement;

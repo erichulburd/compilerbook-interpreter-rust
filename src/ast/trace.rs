@@ -39,9 +39,7 @@ impl Tracer {
     pub fn trace<'a>(&mut self, s: &'a str) -> Box<dyn Fn(&mut Tracer) -> &'a str + 'a> {
         self.trace_print(format!("BEGIN {}", String::from(s)));
         self.inc();
-        Box::new(move |tr: &mut Tracer| {
-            tr.untrace(s)
-        })
+        Box::new(move |tr: &mut Tracer| tr.untrace(s))
     }
 
     pub fn untrace<'a>(&mut self, s: &'a str) -> &'a str {

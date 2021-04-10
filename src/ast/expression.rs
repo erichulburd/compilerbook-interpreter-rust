@@ -1,6 +1,10 @@
 use std::path::Prefix;
 
-use super::{boolean_expression::BooleanExpression, fn_literal::FnLiteral, identifier::Identifier, if_expression::IfExpression, infix_expression::InfixExpression, integer_literal::IntegerLiteral, prefix_expression::PrefixExpression, token_node::TokenNode};
+use super::{
+    boolean_expression::BooleanExpression, call_expression::CallExpression, fn_literal::FnLiteral,
+    identifier::Identifier, if_expression::IfExpression, infix_expression::InfixExpression,
+    integer_literal::IntegerLiteral, prefix_expression::PrefixExpression, token_node::TokenNode,
+};
 
 #[derive(Debug, Clone)]
 pub enum Expression {
@@ -11,6 +15,7 @@ pub enum Expression {
     PrefixExpression(PrefixExpression),
     IfExpression(IfExpression),
     FnLiteral(FnLiteral),
+    CallExpression(Box<CallExpression>),
 }
 
 impl Expression {
@@ -23,6 +28,7 @@ impl Expression {
             Expression::InfixExpression(infix_expression) => infix_expression.string(),
             Expression::IfExpression(if_expression) => if_expression.string(),
             Expression::FnLiteral(fn_literal) => fn_literal.string(),
+            Expression::CallExpression(call_expression) => call_expression.string(),
         }
     }
 }

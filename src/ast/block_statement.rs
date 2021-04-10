@@ -1,5 +1,5 @@
-use super::{statement::Statement, statement_node::StatementNode};
 use super::token_node::TokenNode;
+use super::{statement::Statement, statement_node::StatementNode};
 use crate::token::{Token, TokenType};
 
 #[derive(Debug, Clone)]
