@@ -1,19 +1,52 @@
 use super::parser::Parser;
-use crate::{ast::call_expression::CallExpression, ast::expression::Expression};
+use crate::{
+    ast::operators::Operator,
+    ast::{identifier::Identifier, let_statement::LetStatement},
+    token::{Token, TokenType},
+};
 
 impl<'a> Parser<'a> {
-    pub fn parse_call_expression(&mut self, function: Expression) -> Expression {
-        let token = self.current_token.clone().unwrap();
-        self.next_token();
-        let arguments = self.parse_call_arguments();
+    pub fn parse_let_statement(&mut self) -> Option<LetStatement> {
+        if self.current_token.is_none() {
+            return None;
+        }
+        if !self.expect_peek(TokenType::IDENT) {
+            return None;
+        }
 
-        let call_expression = CallExpression {
+        let t = self.current_token.clone().unwrap();
+        let token = Token {
+            token_type: t.token_type,
+            literal: t.literal,
+        };
+        let literal = String::from(token.literal.as_str());
+        let identifier = Identifier {
             token: token,
-            function: function,
-            arguments: arguments,
+            value: literal,
+        };
+        let literal2 = self.current_token.clone().unwrap().literal;
+        let token2 = Token {
+            token_type: t.token_type,
+            literal: literal2,
         };
 
-        Expression::CallExpression(Box::new(call_expression))
+        if !self.expect_peek(TokenType::ASSIGN) {
+            return None;
+        }
+        self.next_token();
+
+        let value = self.parse_expression(Operator::LOWEST);
+        let stmt = LetStatement {
+            token: token2,
+            name: identifier,
+            value: value,
+        };
+
+        if self.peek_token_is(TokenType::SEMICOLON) {
+            self.next_token();
+        }
+        self.next_token();
+        Some(stmt)
     }
 }
 
@@ -24,72 +57,50 @@ mod tests {
     use crate::ast::statement::Statement;
     use crate::ast::token_node::TokenNode;
     use crate::lexer::Lexer;
+    use crate::token::TokenType;
 
     use super::Parser;
 
     #[test]
-    fn parse_call_expression() {
-        let input = "add(1, 2 * 3, 4 + 5);";
-        let mut l = Lexer::new(input);
-        let mut p = Parser::new(&mut l);
-        let program: Program = p.parse_program();
-        assert_eq!(0, p.errors.len());
-        assert_eq!(
-            1,
-            program.statements.len(),
-            "unexpected number of statements parsed"
-        );
+    fn let_statements() {
+        let tests = vec![
+            ("let x = 5;", "x", ExpressionExpectation::Integer(5)),
+            ("let y = true;", "y", ExpressionExpectation::Bool(true)),
+            (
+                "let foobar = y;",
+                "foobar",
+                ExpressionExpectation::Identifier(String::from("y")),
+            ),
+        ];
+        for (input, identifier_name, value) in tests.iter() {
+            let mut l = Lexer::new(input);
+            let mut p = Parser::new(&mut l);
+            let program: Program = p.parse_program();
+            assert_eq!(
+                1,
+                program.statements.len(),
+                "unexpected number of statements parsed"
+            );
+            assert_eq!(0, p.errors.len());
 
-        let stmt = match program.statements[0].clone() {
-            Statement::ExpressionStatement(stmt) => Some(stmt),
-            _ => None,
-        };
-        assert!(stmt.is_some());
-        assert!(stmt.clone().unwrap().value.is_some());
+            let statement = &program.statements[0];
+            let let_statment = match statement {
+                Statement::LetStatement(let_statement) => Some(let_statement),
+                _ => None,
+            };
+            assert!(let_statment.is_some());
+            assert_eq!(TokenType::LET, let_statment.clone().unwrap().token_type());
 
-        let expression = match stmt.unwrap().value.unwrap() {
-            Expression::CallExpression(call_expression) => Some(call_expression),
-            _ => None,
-        };
-        assert!(expression.is_some());
+            let identifier = let_statment.clone().unwrap().clone().name;
+            assert_eq!(*identifier_name, identifier.string());
 
-        match test_identifier(
-            Box::from(expression.clone().unwrap().function),
-            String::from("add"),
-        ) {
-            Err(e) => panic!("function identifier failure: {}", e),
-            _ => {}
-        };
+            let assignment = let_statment.unwrap().clone().value;
+            assert!(assignment.is_some());
 
-        assert_eq!(3, expression.clone().unwrap().arguments.len());
-
-        let arguments = expression.clone().unwrap().arguments;
-        match test_literal_expression(
-            Box::from(arguments[0].clone()),
-            ExpressionExpectation::Integer(1),
-        ) {
-            Err(e) => panic!("unexpected first argument: {}", e),
-            _ => {}
-        }
-
-        match test_infix_expression(
-            Box::from(arguments[1].clone()),
-            String::from("*"),
-            ExpressionExpectation::Integer(2),
-            ExpressionExpectation::Integer(3),
-        ) {
-            Err(e) => panic!("unexpected second argument: {}", e),
-            _ => {}
-        }
-
-        match test_infix_expression(
-            Box::from(arguments[2].clone()),
-            String::from("+"),
-            ExpressionExpectation::Integer(4),
-            ExpressionExpectation::Integer(5),
-        ) {
-            Err(e) => panic!("unexpected third argument: {}", e),
-            _ => {}
+            match test_literal_expression(Box::from(assignment.unwrap()), (*value).clone()) {
+                Err(e) => panic!("{}", e),
+                _ => {}
+            };
         }
     }
 

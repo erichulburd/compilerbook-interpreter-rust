@@ -1,20 +1,36 @@
 use super::parser::Parser;
-use crate::{ast::call_expression::CallExpression, ast::expression::Expression};
+use crate::{
+    ast::operators::Operator,
+    ast::{return_statement::ReturnStatement},
+    token::{Token, TokenType},
+};
 
 impl<'a> Parser<'a> {
-    pub fn parse_call_expression(&mut self, function: Expression) -> Expression {
-        let token = self.current_token.clone().unwrap();
-        self.next_token();
-        let arguments = self.parse_call_arguments();
 
-        let call_expression = CallExpression {
-            token: token,
-            function: function,
-            arguments: arguments,
-        };
-
-        Expression::CallExpression(Box::new(call_expression))
+  pub fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
+    if self.current_token.is_none() {
+        return None;
     }
+
+    let t = self.current_token.clone().unwrap();
+    let token = Token {
+        token_type: t.token_type,
+        literal: t.literal,
+    };
+
+    let value = self.parse_expression(Operator::LOWEST);
+
+    let stmt = ReturnStatement {
+        token: token,
+        value: value,
+    };
+    if self.peek_token_is(TokenType::SEMICOLON) {
+      self.next_token();
+    }
+    self.next_token();
+    Some(stmt)
+  }
+
 }
 
 #[cfg(test)]
@@ -24,73 +40,46 @@ mod tests {
     use crate::ast::statement::Statement;
     use crate::ast::token_node::TokenNode;
     use crate::lexer::Lexer;
+    use crate::token::TokenType;
 
     use super::Parser;
 
-    #[test]
-    fn parse_call_expression() {
-        let input = "add(1, 2 * 3, 4 + 5);";
+    fn return_statements() {
+      let tests = vec![
+        ("return x;", ExpressionExpectation::Identifier(String::from("x"))),
+        ("return 10;", ExpressionExpectation::Integer(10)),
+        ("return false;", ExpressionExpectation::Bool(false)),
+      ];
+
+      for (input, expected_value) in tests.iter() {
         let mut l = Lexer::new(input);
         let mut p = Parser::new(&mut l);
         let program: Program = p.parse_program();
-        assert_eq!(0, p.errors.len());
         assert_eq!(
             1,
             program.statements.len(),
             "unexpected number of statements parsed"
         );
+        assert_eq!(0, p.errors.len());
 
-        let stmt = match program.statements[0].clone() {
-            Statement::ExpressionStatement(stmt) => Some(stmt),
+        let statement = &program.statements[0];
+        let return_statment = match statement {
+            Statement::ReturnStatement(return_statement) => Some(return_statement),
             _ => None,
         };
-        assert!(stmt.is_some());
-        assert!(stmt.clone().unwrap().value.is_some());
+        assert!(return_statment.is_some());
+        assert_eq!(TokenType::RETURN, return_statment.clone().unwrap().token_type());
 
-        let expression = match stmt.unwrap().value.unwrap() {
-            Expression::CallExpression(call_expression) => Some(call_expression),
-            _ => None,
-        };
-        assert!(expression.is_some());
+        let value = return_statment.unwrap().clone().value;
+        assert!(value.is_some());
 
-        match test_identifier(
-            Box::from(expression.clone().unwrap().function),
-            String::from("add"),
-        ) {
-            Err(e) => panic!("function identifier failure: {}", e),
-            _ => {}
-        };
-
-        assert_eq!(3, expression.clone().unwrap().arguments.len());
-
-        let arguments = expression.clone().unwrap().arguments;
         match test_literal_expression(
-            Box::from(arguments[0].clone()),
-            ExpressionExpectation::Integer(1),
-        ) {
-            Err(e) => panic!("unexpected first argument: {}", e),
+          Box::from(value.unwrap()),
+          (*expected_value).clone()) {
+            Err(e) => panic!("{}", e),
             _ => {}
-        }
-
-        match test_infix_expression(
-            Box::from(arguments[1].clone()),
-            String::from("*"),
-            ExpressionExpectation::Integer(2),
-            ExpressionExpectation::Integer(3),
-        ) {
-            Err(e) => panic!("unexpected second argument: {}", e),
-            _ => {}
-        }
-
-        match test_infix_expression(
-            Box::from(arguments[2].clone()),
-            String::from("+"),
-            ExpressionExpectation::Integer(4),
-            ExpressionExpectation::Integer(5),
-        ) {
-            Err(e) => panic!("unexpected third argument: {}", e),
-            _ => {}
-        }
+        };
+      }
     }
 
     #[derive(Debug, Clone)]

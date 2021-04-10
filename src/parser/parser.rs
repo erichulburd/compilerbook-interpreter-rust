@@ -19,8 +19,8 @@ pub struct Parser<'a> {
     l: &'a mut Lexer<'a>,
     pub errors: Vec<String>,
     pub current_token: Option<Token>,
-    peek_token: Option<Token>,
-    tracer: Tracer,
+    pub peek_token: Option<Token>,
+    pub tracer: Tracer,
 }
 
 impl<'a> Parser<'a> {
@@ -440,70 +440,6 @@ impl<'a> Parser<'a> {
         get_token_type_operator_precedence(self.current_token.clone().unwrap().token_type)
     }
 
-    fn parse_let_statement(&mut self) -> Option<LetStatement> {
-        if self.current_token.is_none() {
-            return None;
-        }
-        if !self.expect_peek(TokenType::IDENT) {
-            return None;
-        }
-
-        let t = self.current_token.clone().unwrap();
-        let token = Token {
-            token_type: t.token_type,
-            literal: t.literal,
-        };
-        let literal = String::from(token.literal.as_str());
-        let identifier = Identifier {
-            token: token,
-            value: literal,
-        };
-        let literal2 = self.current_token.clone().unwrap().literal;
-        let token2 = Token {
-            token_type: t.token_type,
-            literal: literal2,
-        };
-
-        let stmt = LetStatement {
-            token: token2,
-            name: identifier,
-            value: None, // FIXME
-        };
-
-        if !self.expect_peek(TokenType::ASSIGN) {
-            return None;
-        }
-        self.next_token();
-        while !self.current_token_is(TokenType::SEMICOLON) {
-            self.next_token();
-        }
-        self.next_token();
-        Some(stmt)
-    }
-
-    fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
-        if self.current_token.is_none() {
-            return None;
-        }
-
-        let t = self.current_token.clone().unwrap();
-        let token = Token {
-            token_type: t.token_type,
-            literal: t.literal,
-        };
-
-        let stmt = ReturnStatement {
-            token: token,
-            value: None, // FIXME
-        };
-        self.next_token();
-        while !self.current_token_is(TokenType::SEMICOLON) {
-            self.next_token();
-        }
-        self.next_token();
-        Some(stmt)
-    }
-
     pub fn parse_expression(&mut self, operator: Operator) -> Option<Expression> {
         let s = format!("parse_expression, {}", operator);
         let untrace = self.tracer.trace(s.as_str());
@@ -529,7 +465,6 @@ impl<'a> Parser<'a> {
                 left = Expression::InfixExpression(self.parse_infix_expression(left));
             } else if self.peek_token_is(TokenType::LPAREN) {
                 left = self.parse_call_expression(left);
-
             } else {
                 untrace(&mut self.tracer);
                 return Some(left);
@@ -623,65 +558,6 @@ pub mod tests {
     use super::Parser;
     use super::Program;
     use super::Statement;
-
-    #[test]
-    fn let_statements() {
-        let input = "\
-    let x = 5;\
-    let y = 10;\
-    let foobar = 838383;";
-        let mut l = Lexer::new(input);
-        let mut p = Parser::new(&mut l);
-        let program: Program = p.parse_program();
-        assert_eq!(
-            3,
-            program.statements.len(),
-            "unexpected number of statements parsed"
-        );
-        assert_eq!(0, p.errors.len());
-
-        let tests = vec![("x"), ("y"), ("foobar")];
-        for (i, id) in tests.iter().enumerate() {
-            let statement = &program.statements[i];
-            match statement {
-                Statement::LetStatement(let_statement) => {
-                    assert_eq!(TokenType::LET, let_statement.token_type());
-                    assert_eq!(String::from(*id), let_statement.name.value);
-                }
-                _ => {
-                    assert!(false, "all statements should be let statements");
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn return_statements() {
-        let input = "\
-    return 5;\
-    return 10;\
-    return 838383;";
-        let mut l = Lexer::new(input);
-        let mut p = Parser::new(&mut l);
-        let program: Program = p.parse_program();
-        assert_eq!(
-            3,
-            program.statements.len(),
-            "unexpected number of statements parsed"
-        );
-        assert_eq!(0, p.errors.len());
-
-        for (_, statement) in program.statements.iter().enumerate() {
-            match statement {
-                Statement::ReturnStatement(st) => {
-                    assert_eq!(TokenType::RETURN, st.token_type());
-                }
-                _ => {
-                    assert!(false, "all statements should be let statements");
-                }
-            }
-        }
-    }
 
     #[test]
     fn identifier_expression() {
