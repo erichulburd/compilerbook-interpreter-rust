@@ -56,10 +56,14 @@ fn evaluate_node(node: Node) -> Result<Object, String> {
 }
 
 static BANG: &'static str = "!";
+static MINUS: &'static str = "-";
 
 fn evaluate_prefix_expression(operator: String, right: Object) -> Object {
     if operator == BANG {
         return evaluate_bang_operator(right);
+    }
+    if operator == MINUS {
+        return evaluate_minus_operator(right);
     }
     Object::Null(NULL)
 }
@@ -72,8 +76,19 @@ fn evaluate_bang_operator(right: Object) -> Object {
             }
             Object::Bool(TRUE)
         }
-        Object::Null(null_object) => Object::Bool(TRUE),
+        Object::Null(_) => Object::Bool(TRUE),
         _ => Object::Bool(FALSE),
+    }
+}
+
+fn evaluate_minus_operator(right: Object) -> Object {
+    match right {
+        Object::Integer(integer_object) => {
+            Object::Integer(Integer{
+                value: -integer_object.value,
+            })
+        }
+        _ => Object::Null(NULL),
     }
 }
 

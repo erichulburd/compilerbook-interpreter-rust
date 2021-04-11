@@ -3,7 +3,12 @@ mod shared;
 
 #[test]
 fn evaluate_integer() {
-    let tests = vec![("5", 5), ("10", 10)];
+    let tests = vec![
+        ("5", 5),
+        ("10", 10),
+        ("-5", -5),
+        ("-10", -10),
+    ];
     for (input, expected_value) in tests.iter() {
         let obj = match evaluate(*input) {
             Ok(object) => Some(object),
