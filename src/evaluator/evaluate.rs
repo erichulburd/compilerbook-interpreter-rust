@@ -1,9 +1,13 @@
 use crate::{
     ast::{expression::Expression, node::Node, program::Program, statement::Statement},
     lexer::Lexer,
-    object::integer::Integer,
     object::bool::Bool,
-    object::{null::Null, object::Object},
+    object::integer::Integer,
+    object::{
+        bool::{FALSE, TRUE},
+        null::{Null, NULL},
+        object::Object,
+    },
     parser::parser::Parser,
 };
 
@@ -28,6 +32,9 @@ fn evaluate_node(node: Node) -> Result<Object, String> {
             Expression::Boolean(bool_expression) => {
                 evaluate_node(Node::BooleanExpression(bool_expression))
             }
+            Expression::PrefixExpression(prefix_expression) => {
+                evaluate_node(Node::PrefixExpression(prefix_expression))
+            }
             _ => panic!("unexpected statement type"),
         },
         Node::Program(program) => evaluate_statements(program.statements),
@@ -37,7 +44,36 @@ fn evaluate_node(node: Node) -> Result<Object, String> {
         Node::BooleanExpression(bool_expression) => Ok(Object::Bool(Bool {
             value: bool_expression.value,
         })),
+        Node::PrefixExpression(prefix_expression) => {
+            let right = evaluate_node(
+                Node::Expression(*prefix_expression.right.unwrap()));
+            Ok(evaluate_prefix_expression(
+                prefix_expression.operator,
+                right.unwrap()))
+        },
         _ => Err(String::from("unexpected node type")),
+    }
+}
+
+static BANG: &'static str = "!";
+
+fn evaluate_prefix_expression(operator: String, right: Object) -> Object {
+    if operator == BANG {
+        return evaluate_bang_operator(right);
+    }
+    Object::Null(NULL)
+}
+
+fn evaluate_bang_operator(right: Object) -> Object {
+    match right {
+        Object::Bool(bool_object) => {
+            if bool_object.value == TRUE.value {
+                return Object::Bool(FALSE);
+            }
+            Object::Bool(TRUE)
+        }
+        Object::Null(null_object) => Object::Bool(TRUE),
+        _ => Object::Bool(FALSE),
     }
 }
 

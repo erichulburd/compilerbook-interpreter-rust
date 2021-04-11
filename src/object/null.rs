@@ -1,5 +1,6 @@
 use super::object_trait::ObjectTrait;
 
+#[derive(Clone, Copy)]
 pub struct Null {}
 
 impl ObjectTrait for Null {
@@ -7,3 +8,5 @@ impl ObjectTrait for Null {
         String::from("null")
     }
 }
+
+pub static NULL: Null = Null {};

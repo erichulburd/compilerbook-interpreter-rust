@@ -1,5 +1,6 @@
 use super::object_trait::ObjectTrait;
 
+#[derive(Clone, Copy)]
 pub struct Integer {
     pub value: i64,
 }
