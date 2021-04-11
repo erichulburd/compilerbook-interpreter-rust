@@ -1,6 +1,6 @@
 use super::object_trait::ObjectTrait;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Null {}
 
 impl ObjectTrait for Null {

@@ -5,6 +5,19 @@ pub fn evaluate_infix_expression(
   left: Object,
   right: Object,
 ) -> Object {
+  match operator.as_str() {
+    "==" => {
+      return Object::Bool(Bool{
+        value: left == right,
+      });
+    }
+    "!=" => {
+      return Object::Bool(Bool{
+        value: left != right,
+      });
+    }
+    _ => {},
+  }
   match left {
     Object::Integer(left_int) => {
       match right {
@@ -54,15 +67,8 @@ fn evaluate_integer_infix_expression(
     return Object::Bool(Bool{
       value: left.value < right.value
     })
-  } else if operator == "==" {
-    return Object::Bool(Bool{
-      value: left.value == right.value
-    })
-  } else if operator == "!=" {
-    return Object::Bool(Bool{
-      value: left.value != right.value
-    })
   }
 
   Object::Null(NULL)
 }
+

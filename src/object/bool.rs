@@ -1,6 +1,6 @@
 use super::object_trait::ObjectTrait;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq)]
 pub struct Bool {
     pub value: bool,
 }
@@ -8,6 +8,12 @@ pub struct Bool {
 impl ObjectTrait for Bool {
     fn string(&self) -> String {
         format!("{}", self.value)
+    }
+}
+
+impl PartialEq for Bool {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
     }
 }
 
