@@ -1,7 +1,4 @@
-use interpreter::ast::program::Program;
-use interpreter::ast::token_node::TokenNode;
-use interpreter::lexer::Lexer;
-use interpreter::parser::parser::Parser;
+use interpreter::evaluator::evaluate::evaluate;
 use std::io::{self, Write};
 use users::{get_current_uid, get_user_by_uid};
 
@@ -37,7 +34,6 @@ pub fn start() {
     loop {
         handle.write_all(PROMPT).unwrap();
         handle.flush().unwrap();
-        // println!("BYE");
 
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
@@ -45,17 +41,15 @@ pub fn start() {
                 if input.trim().eq("quit") {
                     return;
                 }
-                let mut l = Lexer::new(input.as_str());
-                let mut p = Parser::new(&mut l);
-                let program: Program = p.parse_program();
-                if p.errors.len() != 0 {
-                    println!("{}", MONKEY_FACE);
-                    for err in p.errors.iter() {
-                        println!("\t{}\n", err);
+                let result = evaluate(input.as_str());
+                match result {
+                    Ok(object) => {
+                        println!("{}", object.string())
                     }
-                    return;
+                    Err(e) => {
+                        println!("{}\n{}", MONKEY_FACE, e);
+                    }
                 }
-                println!("{}\n", program.string());
             }
             Err(error) => {
                 println!("Fatal: {}", error);

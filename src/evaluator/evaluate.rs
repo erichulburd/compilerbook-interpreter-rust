@@ -2,6 +2,7 @@ use crate::{
     ast::{expression::Expression, node::Node, program::Program, statement::Statement},
     lexer::Lexer,
     object::integer::Integer,
+    object::bool::Bool,
     object::{null::Null, object::Object},
     parser::parser::Parser,
 };
@@ -24,11 +25,17 @@ fn evaluate_node(node: Node) -> Result<Object, String> {
         },
         Node::Expression(expression) => match expression {
             Expression::IntegerLiteral(integer) => evaluate_node(Node::IntegerLiteral(integer)),
+            Expression::Boolean(bool_expression) => {
+                evaluate_node(Node::BooleanExpression(bool_expression))
+            }
             _ => panic!("unexpected statement type"),
         },
         Node::Program(program) => evaluate_statements(program.statements),
         Node::IntegerLiteral(integer) => Ok(Object::Integer(Integer {
             value: integer.value,
+        })),
+        Node::BooleanExpression(bool_expression) => Ok(Object::Bool(Bool {
+            value: bool_expression.value,
         })),
         _ => Err(String::from("unexpected node type")),
     }
