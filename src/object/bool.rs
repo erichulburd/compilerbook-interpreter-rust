@@ -1,6 +1,6 @@
-use super::object_trait::ObjectTrait;
+use super::{object_trait::ObjectTrait, truthiness_trait::Truthiness};
 
-#[derive(Clone, Copy, Eq)]
+#[derive(Clone, Copy, Debug, Eq)]
 pub struct Bool {
     pub value: bool,
 }
@@ -8,6 +8,12 @@ pub struct Bool {
 impl ObjectTrait for Bool {
     fn string(&self) -> String {
         format!("{}", self.value)
+    }
+}
+
+impl Truthiness for Bool {
+    fn is_truthy(&self) -> bool {
+        self.value
     }
 }
 

@@ -1,6 +1,7 @@
 use crate::ast::fn_literal::FnLiteral;
 use crate::ast::program::Program;
 use crate::ast::statement::Statement;
+use crate::ast::token_node::TokenNode;
 use crate::ast::{
     block_statement::BlockStatement, if_expression::IfExpression,
     operators::get_token_type_operator_precedence, trace::Tracer,
@@ -298,17 +299,13 @@ impl<'a> Parser<'a> {
         if consequence.is_none() {
             self.next_token();
             untrace(&mut self.tracer);
-            return None;
+            panic!("no consequence provided");
         }
 
         let mut alternative = None;
-        if self.peek_token_is(TokenType::ELSE) {
+        if self.current_token_is(TokenType::ELSE) {
             self.next_token();
-
-            if !self.expect_peek(TokenType::LBRACE) {
-                untrace(&mut self.tracer);
-                return None;
-            }
+            self.assert_current_token_type(TokenType::LBRACE);
 
             let alternative_block = self.parse_block_statement();
             if alternative_block.is_some() {
