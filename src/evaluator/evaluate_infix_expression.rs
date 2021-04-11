@@ -1,4 +1,4 @@
-use crate::object::{integer::Integer, null::NULL, object::Object};
+use crate::object::{bool::Bool, integer::Integer, null::NULL, object::Object};
 
 pub fn evaluate_infix_expression(
   operator: String,
@@ -34,20 +34,33 @@ fn evaluate_integer_infix_expression(
     return Object::Integer(Integer{
       value: left.value + right.value
     })
-  }
-  if operator == "-" {
+  } else if operator == "-" {
     return Object::Integer(Integer{
       value: left.value - right.value
     })
-  }
-  if operator == "*" {
+  } else if operator == "*" {
     return Object::Integer(Integer{
       value: left.value * right.value
     })
-  }
-  if operator == "/" {
+  } else if operator == "/" {
     return Object::Integer(Integer{
       value: left.value / right.value
+    })
+  } else if operator == ">" {
+    return Object::Bool(Bool{
+      value: left.value > right.value
+    })
+  } else if operator == "<" {
+    return Object::Bool(Bool{
+      value: left.value < right.value
+    })
+  } else if operator == "==" {
+    return Object::Bool(Bool{
+      value: left.value == right.value
+    })
+  } else if operator == "!=" {
+    return Object::Bool(Bool{
+      value: left.value != right.value
     })
   }
 
