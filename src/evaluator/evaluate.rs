@@ -7,6 +7,7 @@ use crate::{
     lexer::Lexer,
     object::bool::Bool,
     object::integer::Integer,
+    object::return_value::ReturnValue,
     object::{
         bool::{FALSE, TRUE},
         null::{Null, NULL},
@@ -29,6 +30,20 @@ fn evaluate_node(node: Node) -> Result<Object, String> {
         Node::Statement(stmt) => match stmt {
             Statement::ExpressionStatement(expression_statement) => {
                 evaluate_node(Node::Expression(expression_statement.value.unwrap()))
+            }
+            Statement::ReturnStatement(return_statement) => {
+                let value = return_statement.value;
+                if value.is_none() {
+                    return Ok(Object::null());
+                }
+                let return_value = evaluate_node(
+                    Node::Expression(value.unwrap()));
+                if return_value.is_err() {
+                    return return_value
+                }
+                Ok(Object::ReturnValue(Box::from(ReturnValue{
+                    value: return_value.unwrap(),
+                })))
             }
             _ => panic!("unexpected statement type"),
         },
@@ -121,10 +136,15 @@ fn evaluate_minus_operator(right: Object) -> Object {
 
 fn evaluate_statements(statements: Vec<Statement>) -> Result<Object, String> {
     let mut result = Object::Null(Null {});
-    println!("n statements {}", statements.len());
     for statement in statements.iter() {
         match evaluate_node(Node::Statement((*statement).clone())) {
             Ok(object) => {
+                match object {
+                    Object::ReturnValue(return_value) => {
+                        return Ok(return_value.value);
+                    },
+                    _ => {},
+                }
                 result = object;
             }
             Err(e) => {

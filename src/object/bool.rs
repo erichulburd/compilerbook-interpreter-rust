@@ -23,5 +23,13 @@ impl PartialEq for Bool {
     }
 }
 
+impl Bool {
+    pub fn new(value: bool) -> Bool {
+        Bool{
+            value: value,
+        }
+    }
+}
+
 pub static TRUE: Bool = Bool { value: true };
 pub static FALSE: Bool = Bool { value: false };

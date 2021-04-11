@@ -1,7 +1,6 @@
 use crate::ast::fn_literal::FnLiteral;
 use crate::ast::program::Program;
 use crate::ast::statement::Statement;
-use crate::ast::token_node::TokenNode;
 use crate::ast::{
     block_statement::BlockStatement, if_expression::IfExpression,
     operators::get_token_type_operator_precedence, trace::Tracer,
@@ -10,8 +9,7 @@ use crate::ast::{boolean_expression::BooleanExpression, identifier::Identifier};
 use crate::ast::{
     expression::Expression, expression_statement::ExpressionStatement,
     infix_expression::InfixExpression, integer_literal::IntegerLiteral,
-    let_statement::LetStatement, operators::Operator, prefix_expression::PrefixExpression,
-    return_statement::ReturnStatement,
+    operators::Operator, prefix_expression::PrefixExpression,
 };
 use crate::lexer::Lexer;
 use crate::token::{Token, TokenType};

@@ -22,3 +22,11 @@ impl Truthiness for Integer {
         self.value != 0
     }
 }
+
+impl Integer {
+    pub fn new(value: i64) -> Integer {
+        Integer{
+            value: value,
+        }
+    }
+}

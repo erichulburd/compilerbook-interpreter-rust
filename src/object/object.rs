@@ -1,11 +1,12 @@
-use super::{bool::Bool, integer::Integer, null::Null};
+use super::{bool::Bool, integer::Integer, null::{NULL, Null}, return_value::ReturnValue};
 use super::{object_trait::ObjectTrait, truthiness_trait::Truthiness};
 
-#[derive(Clone, Copy, Debug, Eq)]
+#[derive(Clone, Debug, Eq)]
 pub enum Object {
     Integer(Integer),
     Bool(Bool),
     Null(Null),
+    ReturnValue(Box<ReturnValue>),
 }
 
 impl PartialEq for Object {
@@ -39,9 +40,31 @@ impl Truthiness for Object {
 impl Object {
     pub fn string(&self) -> String {
         match self {
-            Object::Integer(integer) => format!("{}", integer.string()),
-            Object::Bool(bool_object) => format!("{}", bool_object.string()),
-            Object::Null(null_object) => format!("{}", null_object.string()),
+            Object::Integer(integer) => integer.string(),
+            Object::Bool(bool_object) => bool_object.string(),
+            Object::Null(null_object) => null_object.string(),
+            Object::ReturnValue(return_value) => return_value.string(),
+        }
+    }
+}
+
+impl Object {
+    pub fn new_integer(value: i64) -> Object {
+        Object::Integer(Integer::new(value))
+    }
+
+    pub fn new_bool(value: bool)  -> Object {
+        Object::Bool(Bool::new(value))
+    }
+
+    pub fn null()  -> Object {
+        Object::Null(NULL)
+    }
+
+    pub fn is_return_value(&self)  -> bool {
+        match self {
+            Object::ReturnValue(_) => true,
+            _ => false,
         }
     }
 }

@@ -7,9 +7,7 @@ use crate::{
 
 impl<'a> Parser<'a> {
     pub fn parse_return_statement(&mut self) -> Option<ReturnStatement> {
-        if self.current_token.is_none() {
-            return None;
-        }
+        self.assert_current_token_type(TokenType::RETURN);
 
         let t = self.current_token.clone().unwrap();
         let token = Token {
@@ -17,6 +15,7 @@ impl<'a> Parser<'a> {
             literal: t.literal,
         };
 
+        self.next_token();
         let value = self.parse_expression(Operator::LOWEST);
 
         let stmt = ReturnStatement {
