@@ -10,6 +10,7 @@ use crate::{
     },
     parser::parser::Parser,
 };
+use super::evaluate_infix_expression::evaluate_infix_expression;
 
 pub fn evaluate(input: &str) -> Result<Object, String> {
     let mut l = Lexer::new(input);
@@ -35,7 +36,19 @@ fn evaluate_node(node: Node) -> Result<Object, String> {
             Expression::PrefixExpression(prefix_expression) => {
                 evaluate_node(Node::PrefixExpression(prefix_expression))
             }
-            _ => panic!("unexpected statement type"),
+            Expression::InfixExpression(expression) => {
+                let left = evaluate_node(
+                    Node::Expression(*expression.left.unwrap())
+                );
+                let right = evaluate_node(
+                    Node::Expression(*expression.right.unwrap())
+                );
+                Ok(evaluate_infix_expression(
+                    expression.operator,
+                    left.unwrap(),
+                    right.unwrap()))
+            }
+            _ => panic!("unexpected expression type"),
         },
         Node::Program(program) => evaluate_statements(program.statements),
         Node::IntegerLiteral(integer) => Ok(Object::Integer(Integer {
