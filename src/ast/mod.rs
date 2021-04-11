@@ -10,6 +10,7 @@ pub mod if_expression;
 pub mod infix_expression;
 pub mod integer_literal;
 pub mod let_statement;
+pub mod node;
 pub mod operators;
 pub mod prefix_expression;
 pub mod program;

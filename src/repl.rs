@@ -1,7 +1,7 @@
-use crate::lexer::Lexer;
-use crate::parser::parser::Parser;
-use crate::ast::program::Program;
-use crate::ast::token_node::TokenNode;
+use interpreter::ast::program::Program;
+use interpreter::ast::token_node::TokenNode;
+use interpreter::lexer::Lexer;
+use interpreter::parser::parser::Parser;
 use std::io::{self, Write};
 use users::{get_current_uid, get_user_by_uid};
 
@@ -63,4 +63,8 @@ pub fn start() {
             }
         }
     }
+}
+
+fn main() {
+    start();
 }

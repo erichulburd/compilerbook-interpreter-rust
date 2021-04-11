@@ -885,7 +885,6 @@ pub mod tests {
             ),
         ];
         for (input, expected_output) in tests.iter() {
-            println!("INPUT {}", *input);
             let mut l = Lexer::new(*input);
             let mut p = Parser::new(&mut l);
             let program = p.parse_program();

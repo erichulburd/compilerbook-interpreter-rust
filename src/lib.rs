@@ -3,12 +3,9 @@
 #[macro_use(defer)]
 extern crate scopeguard;
 
-mod ast;
-mod lexer;
-mod parser;
-mod repl;
+pub mod ast;
+pub mod evaluator;
+pub mod lexer;
+pub mod object;
+pub mod parser;
 mod token;
-
-fn main() {
-    repl::start();
-}
